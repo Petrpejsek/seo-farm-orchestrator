@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seo-farm-backend"
+version = "0.1.0"
+description = "FastAPI backend pro SEO Farm Orchestrator s Temporal.io integrací"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "SEO Farm Backend", email = "admin@seo-farm.com"}
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "temporalio>=1.4.0",
+    "python-dotenv>=1.0.0",
+    "prisma>=0.11.0",
+    "openai>=1.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0"
+] 

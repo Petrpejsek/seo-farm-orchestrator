@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-py"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  language    String   @default("cs")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  assistants   Assistant[]
+  workflowRuns WorkflowRun[]
+
+  @@map("projects")
+}
+
+model Assistant {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String   // Lidský název (např. "Content Generator")
+  functionKey String   // Klíč funkce (např. "generate_llm_friendly_content")
+  inputType   String   @default("string")  // string, json, dict
+  outputType  String   @default("string")  // string, json, dict
+  order       Int      // Pořadí v workflow (1, 2, 3...)
+  timeout     Int      @default(60)        // Timeout v sekundách
+  heartbeat   Int      @default(15)        // Heartbeat timeout v sekundách
+  active      Boolean  @default(true)      // Aktivní/neaktivní
+  description String?  // Popis co dělá
+  
+  // OpenAI parametry
+  model        String  @default("gpt-4o")    // OpenAI model (gpt-4o, gpt-4, gpt-3.5-turbo...)
+  temperature  Float   @default(0.7)        // Kreativita 0.0-2.0
+  top_p        Float   @default(0.9)        // Nucleus sampling 0.0-1.0
+  max_tokens   Int     @default(800)        // Maximální délka odpovědi
+  system_prompt String? // Volitelný systémový prompt
+  
+  // UX metadata pro admina
+  use_case         String? // Krátké shrnutí co asistent dělá
+  style_description String? // Jak má asistent odpovídat (max 1000 znaků)
+  pipeline_stage   String? // Fáze pipeline (brief, research, draft, humanizer, seo, multimedia, qa, publish)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, order])  // Unikátní pořadí v rámci projektu
+  @@map("assistants")
+}
+
+model WorkflowRun {
+  id          String   @id @default(uuid())
+  projectId   String
+  runId       String   // Temporal runId
+  workflowId  String   // Temporal workflowId
+  topic       String   // Vstupní téma/topic
+  status      String   // CREATED, RUNNING, COMPLETED, FAILED, TIMED_OUT, TERMINATED
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  outputPath  String?  // Cesta k JSON výstupu
+  resultJson  String?  // Finální JSON výsledek (stored as JSON string)
+  errorMessage String? // Chybová zpráva při selhání
+  elapsedSeconds Int?  // Celková doba běhu v sekundách
+  stageCount    Int?   // Počet dokončených fází
+  totalStages   Int?   // Celkový počet fází
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, runId])  // Unikátní Temporal identifikátory
+  @@map("workflow_runs")
+} 

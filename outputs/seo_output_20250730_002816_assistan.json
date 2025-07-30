@@ -1,0 +1,181 @@
+{
+  "assistants_executed": 9,
+  "final_output": "Rozumím, že chceš vytvořit co nejkomplexnější datový koláč pro SEO. \n\n1. **Meta title**: Tento prvek je klíčový pro SEO, protože slouží jako název stránky, který vidí uživatelé výsledků vyhledávání. Mělo by být přímé a stručné, zpravidla do 60 - 70 znaků.\n\n2. **Meta description**: Práce na tomto meta tagu je důležitá, protože slouží jako krátký popis toho, co lze na stránce najít. Mělo by být stručné a přitažlivé, často do 150 - 160 znaků.\n\n3. **Open Graph tagy**: Tyto tagy umožňují jednotnou integraci mezi vaším webem a sociálními médii. Slouží k seskládání sdílených odkazů na Facebooku, Twitteru atd. \n\n4. **Schema markup**: Tento prvek, také označovaný jako \"strukturovaná data\", poskytuje vyhledávačům podrobnější kontext o vašem obsahu. Mohou to být hodnocení, recepty, události a mnoho dalšího.\n\nPři tvorbě těchto prvků je důležité dodržovat best practices pro SEO, jako je zaměření na klíčová slova a zajištění, že jsou přímo příslušné k obsahu vaší stránky. Berte v úvahu také uživatelskou zkušenost - ujistěte se, že všechny meta tagy jsou srozumitelné a přínosné pro uživatele.\n\nMám v plánu vytvořit konkrétní příklady těchto prvků a pomoci s dalšími aspekty SEO?",
+  "pipeline_success": true,
+  "project_id": "a5999892-ae09-46fd-a3c2-7a8af516f8ac",
+  "run_id": "c42e114a-e20c-4cf4-a330-2969c68f0dbe",
+  "stage_logs": [
+    {
+      "stage": "load_assistants_config",
+      "status": "STARTED",
+      "timestamp": 1753827866.210709
+    },
+    {
+      "duration": 0.07930588722229004,
+      "stage": "load_assistants_config",
+      "status": "COMPLETED",
+      "timestamp": 1753827866.290015
+    },
+    {
+      "function_key": "brief_assistant",
+      "order": 1,
+      "stage": "BriefAssistant",
+      "status": "STARTED",
+      "timestamp": 1753827866.290015
+    },
+    {
+      "duration": 24.458646059036255,
+      "function_key": "brief_assistant",
+      "metadata": {},
+      "order": 1,
+      "output": "Téma: Jak efektivně optimalizovat obsah pro SEO\n\nCílová skupina: \nPodnikatelé a marketingoví specialisté, kteří chtějí rozšířit své dovednosti v oblasti SEO a zlepšit viditelnost svého obsahu v online prostředí. \n\nKlíčové body, které má obsah pokrýt:\n1. Základní představa o SEO - Co to znamená a proč je důležité pro online marketing.\n2. Jak fungují vyhledávače - Základní pochopení algoritmu vyhledávání a jeho vlivu na viditelnost webu. \n3. Výběr klíčových slov - Jak identifikovat relevatni klíčová slova pro obsah, nástroje pro výzkum klíčových slov.\n4. SEO optimalizace na stránce - Jak optimalizovat titulky, meta popisky, URL a další na-stránkové faktory pro SEO.\n5. Link building - Vysvětlení, proč je důležité a jak to lze provést.\n6. Měření SEO úspěchu - Představení nástrojů a metod pro sledování a měření úspěchu SEO.\n\nHlavní cíle textu:\n1. Vzdělávat čtenáře o základech a důležitosti SEO.\n2. Poskytnout průvodce pro efektivní vytváření a optimalizaci SEO obsahu.\n3. Motivovat čtenáře k implementaci těchto SEO taktik do jejich vlastní marketingové strategie.\n4. Zvýšit povědomí o hodnotě SEO a jeho potenciálu pro zvýšení viditelnosti a návštěvnosti webu. \n\nDalší poznámky:\nObsah by měl být napsán v jednoduché a srozumitelné formě, aby byl přístupný i pro čtenáře, kteří nejsou seznámeni s koncepty SEO. Přesto by měl poskytnout dostatečnou hloubku pro čtenáře, kteří již mají základní znalosti a chtějí se dozvědět více.",
+      "stage": "BriefAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753827890.748661
+    },
+    {
+      "function_key": "research_assistant",
+      "order": 2,
+      "stage": "ResearchAssistant",
+      "status": "STARTED",
+      "timestamp": 1753827890.748661
+    },
+    {
+      "duration": 5.284941911697388,
+      "function_key": "research_assistant",
+      "metadata": {},
+      "order": 2,
+      "output": "Omlouvám se, ale potřeboval bych více informací k tomu, co přesně jste hledal s ohledem na \"test kompletní pipeline - 9 asistentů\". Je to součást softwarového vývoje, datové analýzy nebo něčeho jiného? Čím podrobnější budou informace, tím lépe vám budu moci pomoci při výzkumu.",
+      "stage": "ResearchAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753827896.033603
+    },
+    {
+      "function_key": "keyword_assistant",
+      "order": 3,
+      "stage": "KeywordAssistant",
+      "status": "STARTED",
+      "timestamp": 1753827896.033603
+    },
+    {
+      "duration": 26.59189200401306,
+      "function_key": "keyword_assistant",
+      "metadata": {},
+      "order": 3,
+      "output": "Jistě, seznam níže je pro téma \"organické dětské potraviny\".\n\nKlíčová slova:\n1. Organické dětské potraviny\n2. Přírodní dětské potraviny\n3. Bio dětské potraviny\n4. Dětské bio potraviny\n5. Zdravé dětské potraviny\n6. Košík s organickými potravinami pro děti\n\nLong-tail varianty:\n1. Kde koupit organické dětské potraviny\n2. Nejlepší organické dětské potraviny\n3. Recenze na organické dětské potraviny\n4. Organické a přírodní dětské potraviny\n5. Jak vyrobit organické dětské potraviny\n6. Bezpečnost organických dětských potravin\n7. Výhody organických dětských potravin pro děti\n\nLSI (Latent Semantic Indexing) Klíčová slova:\n1. Bezpečné potraviny pro děti\n2. Zdravé jídlo pro děti\n3. Organické suroviny pro děti\n4. Bio výživa pro děti\n5. Přírodní strava pro děti\n6. Bez pesticidů\n7. Dětská strava bez GMO\n\nSearch Intent analýza:\n1. Informationální intent: Recenze na organické dětské potraviny, jak vyrobit organické dětské potraviny, bezpečnost organických dětských potravin.\n2. Navigační intent: Nejlepší organické dětské potraviny.\n3. Transakční intent: Kde koupit organické dětské potraviny.\n4. Komerční vyhledávání: Porovnání organických dětských potravin, cenově dostupné organické dětské potraviny.\n\nDoporučení pro keyword density:\nZaměřte se na dosažení optimální keyword density 2-3 %. Nenadužívejte klíčových slov, aby obsah zůstal přirozený a relevantní pro čtenáře.",
+      "stage": "KeywordAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753827922.625495
+    },
+    {
+      "function_key": "structure_assistant",
+      "order": 4,
+      "stage": "StructureAssistant",
+      "status": "STARTED",
+      "timestamp": 1753827922.625495
+    },
+    {
+      "duration": 16.38184905052185,
+      "function_key": "structure_assistant",
+      "metadata": {},
+      "order": 4,
+      "output": "H1: Testování kompletní pipeline s devíti asistentkami\n\nH2: Úvod do problematiky testování pipeline\n- H3: Co je to pipeline?\n- H3: Proč je testování pipeline důležité?\n\nH2: Základy testování pipeline: 9 asistentů\n- H3: Přehled asistentů\n- H3: Role každého asistenta v pipeline\n- H4: Asistent 1: Plánování\n- H4: Asistent 2: Návrh\n- H4: Asistent 3: Implementace\n- H4: Asistent 4: Testování\n- H4: Asistent 5: Nasazení\n- H4: Asistent 6: Monitorování \n- H4: Asistent 7: Řešení problémů\n- H4: Asistent 8: Optimalizace\n- H4: Asistent 9: Dohled\n\nH2: Výhody a potíže s testováním kompletní pipeline\n- H3: Výhody testování\n- H3: Běžné problémy při testování\n- H3: Jak se vyhnout běžným problémům\n\nH2: Příklady reálných scénářů použití testování pipeline\n- H3: Testování pipeline ve vývoji softwaru\n- H3: Testování pipeline v datech a analytice\n- H3: Testování pipeline v rámci provozu a správy IT systému\n\nH2: Závěrem: jak správně testovat kompletní pipeline\n- H3: Klíčové body pro úspěšný test\n- H3: Nejlepší nástroje pro testování\n\nH2: Doporučené zdroje a další čtení\n- H3: Odkazy na užitečné zdroje\n- H3: Doporučené knihy a články o testování pipeline",
+      "stage": "StructureAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753827939.007344
+    },
+    {
+      "function_key": "content_assistant",
+      "order": 5,
+      "stage": "ContentAssistant",
+      "status": "STARTED",
+      "timestamp": 1753827939.007344
+    },
+    {
+      "duration": 90.39312601089478,
+      "function_key": "content_assistant",
+      "metadata": {},
+      "order": 5,
+      "output": "V opačném pořadí, pokud jde o odborníky v oblasti SEO, tvým úkolem je vytvářet prvotřídní obsah. To někdy zahrnuje pracovat na exhaustivních článcích postavených na základě struktury, briefu a dat z výzkumu. Jsi zodpovědný za to, aby tvůj obsah byl snadno čitelný a atraktivní pro čtenáře, zatímco také zahrnujete klíčová slova, která vám pomáhají dosáhnout lepšího hodnocení v Google a zvýšit angažovanost uživatelů.\n\nPokud jde o tvůrce obsahu, pak je tvým úkolem vytvářet články, které jsou nejen podněcné a informativní, ale také optimalizované pro vyhledávače. To značí, že musíš zahrnout klíčová slova, které jsou pro tvou cílovou skupinu důležitá, ale zároveň musíš udržet přirozený tón a flow textu. Tvým cílem je uvěznit čtenáře svými slovy a povzbudit je k dalšímu čtení.\n\nDalší klíčovou vlastnosti tvé práce je schopnost researchovat. Musíš být schopen provádět detailní a intenzivní výzkum na základě briefu, abys poskytl tento druh obsahu, který tvá cílová skupina chce číst. Dodávání přesných a relevantních informací je nepochybně jedním z nejdůležitějších aspektů tvé práce.\n\nZávěrem, jako SEO specialistu a copywritera si musíš být vědom hlubšího porozumění proč a jak lidé vyhledávají informace online. Toto pochopení ti umožní vytvořit obsah, který je nejen atraktivní a hodnotný, ale také snadno nalezitelný na vyhledávačích.",
+      "stage": "ContentAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753828029.40047
+    },
+    {
+      "function_key": "seo_assistant",
+      "order": 6,
+      "stage": "SEOAssistant",
+      "status": "STARTED",
+      "timestamp": 1753828029.40047
+    },
+    {
+      "duration": 19.819711923599243,
+      "function_key": "seo_assistant",
+      "metadata": {},
+      "order": 6,
+      "output": "Tento text nemá optimalizované SEO aspekty. Neobsahuje klíčové slovo, nedochází v něm k internímu propojování a také nedodržuje osvědčené postupy SEO. Dále je bez dostatečně přístupného obsahu, který by mohl být hodnocen na jeho srozumitelnost. Aby byl text SEO-optimalizovaný, zde jsou některé návrhy:\n\n1. Klíčové slovo: Zahrnutí relevantního klíčového slova do textu. Klíčové slovo by mělo být úzce související s tématem textu a pokud možno, mělo by se objevit v nadpisu, podnadpisu a v prvním odstavci.\n\n2. Interní propojování: To může zvýšit čas strávený na webu a zlepšit SEO. Připojení relevantních odkazů do textu může odkázat čtenáře na další relevantní obsah na stejném webu.\n\n3. Srozumitelnost: Text by měl být snadno čitelný a srozumitelný. Použití jednoduchých a stručných vět, s důležitými body zvýrazněnými nebo zahrnutými do bullet rosters, může pomoci.\n\n4. SEO best practices: Mezi ně patří vytváření unikátního a relevantního obsahu, zahrnutí meta tagů a alt textu pro obrázky, optimalizace URL struktury a použití mobilně přívětivého designu.\n\nPoleceno by bylo zrevidovat text a přidat tyto prvky pro zlepšení SEO.",
+      "stage": "SEOAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753828049.220182
+    },
+    {
+      "function_key": "review_assistant",
+      "order": 7,
+      "stage": "ReviewAssistant",
+      "status": "STARTED",
+      "timestamp": 1753828049.220182
+    },
+    {
+      "duration": 7.739483118057251,
+      "function_key": "review_assistant",
+      "metadata": {},
+      "order": 7,
+      "output": "Jako content reviewer a QA specialista bych toto rád(a) zkontroloval(a), ale úplně nechápu smysl tohoto vstupu. Informace jako \"TEST KOMPLETNÍ PIPELINE - 9 ASISTENTŮ\" neříká ničemu konkrétního. Prosím o více informací nebo o kontext k tomuto vstupu.",
+      "stage": "ReviewAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753828056.959665
+    },
+    {
+      "function_key": "publish_assistant",
+      "order": 8,
+      "stage": "PublishAssistant",
+      "status": "STARTED",
+      "timestamp": 1753828056.959665
+    },
+    {
+      "duration": 21.928794860839844,
+      "function_key": "publish_assistant",
+      "metadata": {},
+      "order": 8,
+      "output": "Jako Publishing Specialist, je mým úkolem zajistit, aby veškerý publikovaný obsah byl v optimálním formátu, což zahrnuje pečlivé prověření a úpravu HTML značek, formátování textu, optimalizaci obrázků, přidání interních odkazů a řešení jakýchkoliv technických aspektů souvisejících s CMS (Content Management System).\n\nV procesu formátování se postarám o to, aby byl text strukturovaný a čitelný, s využitím vhodných nadpisů, odstavců a seznamů. HTML značky umožňují vysoce kontrolovatelný formát a povolují integraci interaktivních prvků, jako je video nebo audio obsah.\n\nOptimalizace obrázků je důležitou součástí mé práce. Velké obrázky mohou zpomalit načítání stránky a mají vliv na SEO. Proto je důležité upravit velikost a kompresi obrázků pro optimální rychlost načítání stránky beze ztráty kvality.\n\nDalším klíčovým aspektem je přidání interních odkazů. Ty pomáhají návštěvníkům stránky najít další relevantní obsah a zvýšit dobu, kterou na stránce stráví. Kromě toho, tím, že propojuji interní stránky, zvyšuji jejich SEO hodnocení.\n\nNakonec, abych zajistil hladký a efektivní provoz stránky, musím řešit jakékoliv technické aspekty spojené s CMS. Toto může zahrnovat úpravy HTML kódu, zajistit kompatibilitu mezi různými internetovými prohlížeči, nebo řešení problémů s kompatibilitou pluginů.\n\nVšechny tyto kroky zajistí, že finální obsah bude perfektně připravený pro publikování.",
+      "stage": "PublishAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753828078.88846
+    },
+    {
+      "function_key": "meta_assistant",
+      "order": 9,
+      "stage": "MetaAssistant",
+      "status": "STARTED",
+      "timestamp": 1753828078.88846
+    },
+    {
+      "duration": 17.813903093338013,
+      "function_key": "meta_assistant",
+      "metadata": {},
+      "order": 9,
+      "output": "Rozumím, že chceš vytvořit co nejkomplexnější datový koláč pro SEO. \n\n1. **Meta title**: Tento prvek je klíčový pro SEO, protože slouží jako název stránky, který vidí uživatelé výsledků vyhledávání. Mělo by být přímé a stručné, zpravidla do 60 - 70 znaků.\n\n2. **Meta description**: Práce na tomto meta tagu je důležitá, protože slouží jako krátký popis toho, co lze na stránce najít. Mělo by být stručné a přitažlivé, často do 150 - 160 znaků.\n\n3. **Open Graph tagy**: Tyto tagy umožňují jednotnou integraci mezi vaším webem a sociálními médii. Slouží k seskládání sdílených odkazů na Facebooku, Twitteru atd. \n\n4. **Schema markup**: Tento prvek, také označovaný jako \"strukturovaná data\", poskytuje vyhledávačům podrobnější kontext o vašem obsahu. Mohou to být hodnocení, recepty, události a mnoho dalšího.\n\nPři tvorbě těchto prvků je důležité dodržovat best practices pro SEO, jako je zaměření na klíčová slova a zajištění, že jsou přímo příslušné k obsahu vaší stránky. Berte v úvahu také uživatelskou zkušenost - ujistěte se, že všechny meta tagy jsou srozumitelné a přínosné pro uživatele.\n\nMám v plánu vytvořit konkrétní příklady těchto prvků a pomoci s dalšími aspekty SEO?",
+      "stage": "MetaAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753828096.702363
+    },
+    {
+      "stage": "save_pipeline_result",
+      "status": "STARTED",
+      "timestamp": 1753828096.702363
+    }
+  ],
+  "topic": "TEST KOMPLETNÍ PIPELINE - 9 ASISTENTŮ",
+  "total_assistants": 9,
+  "workflow_id": "assistant_pipeline_test_kompletní_pipeline_-_9_asistentů_1753827866"
+}

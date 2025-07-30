@@ -1,0 +1,33 @@
+version: '3.5'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+      
+  temporal:
+    image: temporalio/auto-setup:1.23.1
+    depends_on:
+      - postgres
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres
+      - TEMPORAL_UI_PORT=8080
+    ports:
+      - "7233:7233"   # Temporal gRPC
+      - "8080:8080"   # Temporal Web UI
+    volumes:
+      - temporal-data:/etc/temporal/data
+
+volumes:
+  temporal-data:
+  temporal-postgres-data: 
