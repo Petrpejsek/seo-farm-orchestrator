@@ -22,6 +22,7 @@ class ProjectUpdate(BaseModel):
 
 class AssistantResponse(BaseModel):
     id: str
+    projectId: str
     name: str
     functionKey: str
     inputType: str
@@ -32,7 +33,8 @@ class AssistantResponse(BaseModel):
     active: bool
     description: Optional[str] = None
     
-    # OpenAI parametry
+    # LLM Provider & Model parametry
+    model_provider: str
     model: str
     temperature: float
     top_p: float
@@ -169,10 +171,11 @@ async def get_project(project_id: str):
         if not project:
             raise HTTPException(status_code=404, detail="Projekt nenalezen")
         
-        # Převod asistentů na response model
+        # Převod asistentů na response model s přidáním projectId
         assistants = [
             AssistantResponse(
                 id=a.id,
+                projectId=a.projectId,  # 🔥 KRITICKÁ OPRAVA: Přidáno projectId
                 name=a.name,
                 functionKey=a.functionKey,
                 inputType=a.inputType,
@@ -182,6 +185,7 @@ async def get_project(project_id: str):
                 heartbeat=a.heartbeat,
                 active=a.active,
                 description=a.description,
+                model_provider=a.model_provider,
                 model=a.model,
                 temperature=a.temperature,
                 top_p=a.top_p,
@@ -263,17 +267,7 @@ async def update_project(project_id: str, project_update: ProjectUpdate):
                 timeout=a.timeout,
                 heartbeat=a.heartbeat,
                 active=a.active,
-                description=a.description,
-                model=a.model,
-                temperature=a.temperature,
-                top_p=a.top_p,
-                max_tokens=a.max_tokens,
-                system_prompt=a.system_prompt,
-                use_case=a.use_case,
-                style_description=a.style_description,
-                pipeline_stage=a.pipeline_stage,
-                createdAt=a.createdAt,
-                updatedAt=a.updatedAt
+                description=a.description
             ) for a in updated_project.assistants
         ]
         

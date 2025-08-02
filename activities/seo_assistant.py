@@ -5,7 +5,7 @@ Optimalizuje content pro vyhledávače (meta tagy, klíčová slova, struktura).
 
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 from openai import OpenAI
 from datetime import datetime
 
@@ -22,7 +22,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-async def seo_assistant(content: str, assistant_id: Optional[str] = None) -> str:
+async def seo_assistant(content: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
     """Optimalizuje content pro vyhledávače (meta tagy, klíčová slova, struktura)."""
     
     logger.info(f"📈 SEOAssistant optimalizuje content: {len(content)} znaků")
@@ -79,15 +79,12 @@ Vrať pouze optimalizovaný HTML obsah.
             max_tokens=default_params["max_tokens"]
         )
         
-        return response.choices[0].message.content.strip()
+        optimized_content = response.choices[0].message.content.strip()
+        return {"output": optimized_content}
         
     except Exception as e:
-        logger.error(f"❌ Chyba při SEO optimalizaci: {e}")
-        # Fallback - přidáme základní SEO elementy
-        optimized = content
-        if not '<meta name="description"' in optimized:
-            optimized = '<meta name="description" content="SEO optimalizovaný článek - důležité informace a praktické tipy.">\n' + optimized
-        return optimized
+        logger.error(f"❌ SEO optimalizace selhala: {e}")
+        raise Exception(f"SEOAssistant selhal: {e}")
 
 def seo_assistant_sync(content: str, assistant_id: Optional[str] = None) -> str:
     import asyncio

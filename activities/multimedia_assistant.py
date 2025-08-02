@@ -75,6 +75,13 @@ Vrať pouze JSON bez dalšího textu.
     """
     
     try:
+        # Inicializace OpenAI klienta
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise Exception("❌ OPENAI_API_KEY není nastavený")
+        
+        client = OpenAI(api_key=api_key)
+        
         response = client.chat.completions.create(
             model=default_params["model"],
             messages=[
@@ -90,40 +97,42 @@ Vrať pouze JSON bez dalšího textu.
         
         # Pokusíme se parsovat JSON
         try:
+            multimedia_data = None
             if "```json" in result:
                 json_start = result.find("```json") + 7
                 json_end = result.find("```", json_start)
                 if json_end != -1:
                     json_str = result[json_start:json_end].strip()
-                    return json.loads(json_str)
-            return json.loads(result)
-        except json.JSONDecodeError:
-            # Fallback struktura
+                    multimedia_data = json.loads(json_str)
+            else:
+                multimedia_data = json.loads(result)
+            
+            # Konverze na formát kompatibilní s ImageRendererAssistant
+            image_prompts = []
+            if multimedia_data and "images" in multimedia_data:
+                for img in multimedia_data["images"]:
+                    image_prompts.append({
+                        "type": "image",
+                        "image_prompt": f"{img.get('description', img.get('title', 'Professional image'))}, {img.get('alt_text', '')}",
+                        "title": img.get("title", "Professional image"),
+                        "purpose": img.get("purpose", "illustration"),
+                        "size": img.get("size_recommendation", "1024x1024")
+                    })
+            
+            # Návrat s output klíčem pro workflow kompatibilitu
             return {
-                "images": [{"title": "Hero obrázek", "description": result[:200], "purpose": "hero"}],
-                "infographics": [],
-                "videos": [],
-                "interactive": [],
-                "social_media": []
+                "output": image_prompts,  # ✅ NATIVNÍ OBJEKT, NE STRING!
+                "multimedia_suggestions": multimedia_data,
+                "image_prompts_count": len(image_prompts)
             }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Multimedia JSON parsing selhalo: {e}")
+            raise Exception(f"MultimediaAssistant nelze parsovat JSON response: {e}")
         
     except Exception as e:
-        logger.error(f"❌ Chyba při generování multimedia: {e}")
-        return {
-            "images": [
-                {
-                    "title": "Hlavní ilustrace",
-                    "description": "Ilustrační obrázek k článku",
-                    "purpose": "hero", 
-                    "alt_text": "Ilustrace k článku",
-                    "size_recommendation": "1200x630px"
-                }
-            ],
-            "infographics": [],
-            "videos": [{"title": "Video shrnutí", "description": "Krátké video shrnutí článku"}],
-            "interactive": [],
-            "social_media": [{"title": "Social media post", "size_recommendation": "1080x1080px"}]
-        }
+        logger.error(f"❌ Multimedia generation selhala: {e}")
+        raise Exception(f"MultimediaAssistant selhal: {e}")
 
 def multimedia_assistant_sync(content: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
     import asyncio

@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 @workflow.defn
 class AssistantPipelineWorkflow:
     @workflow.run
-    async def run(self, topic: str, project_id: Optional[str] = None, csv_base64: Optional[str] = None) -> dict:
+    async def run(self, topic: str, project_id: Optional[str] = None, csv_base64: Optional[str] = None, current_date: Optional[str] = None) -> dict:
         workflow_id = workflow.info().workflow_id
         run_id = workflow.info().run_id
         
-        workflow.logger.info(f"🚀 ASSISTANT_PIPELINE_STARTED: topic='{topic}' project_id={project_id} workflow_id={workflow_id} run_id={run_id}")
+        workflow.logger.info(f"🚀 ASSISTANT_PIPELINE_STARTED: topic='{topic}' project_id={project_id} date='{current_date}' workflow_id={workflow_id} run_id={run_id}")
         
         # Inicializace stage logs pro tracking
         stage_logs = []
@@ -24,6 +24,7 @@ class AssistantPipelineWorkflow:
             "topic": topic,
             "project_id": project_id,
             "csv_base64": csv_base64,
+            "current_date": current_date,
             "current_output": topic  # Začneme s tématem jako prvním vstupem
         }
         
@@ -34,48 +35,93 @@ class AssistantPipelineWorkflow:
             workflow.logger.info(f"📋 STAGE_STARTED: {stage_name} for project_id={project_id}")
             stage_logs.append({"stage": stage_name, "status": "STARTED", "timestamp": stage_start})
             
+            # 🚫 STRICT PROJECT_ID VALIDATION - žádné fallbacky
+            if not project_id:
+                workflow.logger.error("❌ project_id je povinný pro načtení asistentů - workflow nelze spustit")
+                raise Exception("❌ project_id je povinný pro načtení asistentů - workflow nelze spustit")
+            
             assistants_config = await workflow.execute_activity(
                 "load_assistants_from_database",
-                project_id or "",  # ← Předávám přímo string místo dict
+                project_id,
                 schedule_to_close_timeout=timedelta(seconds=30),
                 heartbeat_timeout=timedelta(seconds=10)
             )
             
             stage_duration = workflow.now().timestamp() - stage_start
-            workflow.logger.info(f"✅ STAGE_FINISHED: {stage_name} duration={stage_duration:.2f}s assistants_count={len(assistants_config)}")
+            assistants_count = len(assistants_config.get("assistants", [])) if isinstance(assistants_config, dict) else len(assistants_config) if assistants_config else 0
+            workflow.logger.info(f"✅ STAGE_FINISHED: {stage_name} duration={stage_duration:.2f}s assistants_count={assistants_count}")
             stage_logs.append({"stage": stage_name, "status": "COMPLETED", "timestamp": workflow.now().timestamp(), "duration": stage_duration})
 
-            assistants = assistants_config  # assistants_config je už přímo list
+            # Extrakce asistentů z Dict response
+            if isinstance(assistants_config, dict):
+                assistants = assistants_config.get("assistants", [])
+                workflow.logger.info(f"📋 Extrahováno {len(assistants)} asistentů z dict response")
+            else:
+                assistants = assistants_config if assistants_config else []
+                workflow.logger.warning(f"⚠️ Neočekávaný typ response: {type(assistants_config)}")
+            
             if not assistants:
                 workflow.logger.warning("⚠️ Žádní asistenti nenalezeni - ukončuji workflow")
                 raise Exception("Žádní aktivní asistenti nenalezeni pro daný projekt")
 
             # 2️⃣ Postupné spuštění asistentů podle pořadí
-            for assistant in assistants:
-                assistant_name = assistant.get("name", "UnknownAssistant")
-                function_key = assistant.get("function_key", "")
+            for i, assistant in enumerate(assistants):
+                # 🚫 STRICT ASSISTANT VALIDATION - žádné fallbacky
+                assistant_name = assistant.get("name")
+                if not assistant_name:
+                    workflow.logger.error(f"❌ Asistent #{i+1} nemá name - workflow nelze spustit")
+                    raise Exception(f"❌ Asistent #{i+1} nemá name - workflow nelze spustit")
+                
+                function_key = assistant.get("function_key")
+                if not function_key:
+                    workflow.logger.error(f"❌ Asistent {assistant_name} nemá function_key - workflow nelze spustit")
+                    raise Exception(f"❌ Asistent {assistant_name} nemá function_key - workflow nelze spustit")
                 # Nastavení timeoutů pro asistenta - prodlouženo pro finální asistenty
-                timeout = 300  # 5 minut místo 3 minut
-                heartbeat = 60  # 60s heartbeat místo 30s
+                timeout = 600  # 10 minut pro dlouhé LLM odpovědi
+                heartbeat = 180  # 3 minuty heartbeat pro Claude API volání
                 
                 stage_name = assistant_name
                 stage_start = workflow.now().timestamp()
                 workflow.logger.info(f"🤖 ASSISTANT_STARTED: {assistant_name} (function_key={function_key})")
+                # Validace order - musí být specifikován
+                order = assistant.get("order")
+                if order is None:
+                    workflow.logger.error(f"❌ Asistent {assistant_name} nemá order - workflow nelze spustit")
+                    raise Exception(f"❌ Asistent {assistant_name} nemá order - workflow nelze spustit")
+                
                 stage_logs.append({
                     "stage": assistant_name, 
                     "status": "STARTED", 
                     "timestamp": stage_start,
                     "function_key": function_key,
-                    "order": assistant.get("order", 0)
+                    "order": order
                 })
                 
                 try:
+                    # 🎯 INTELIGENTNÍ TOPIC SELECTION PRO ASISTENTY
+                    if function_key == "draft_assistant":
+                        # DraftAssistant dostává kombinaci Brief + Research dat
+                        brief_output = pipeline_data.get("brief_assistant_output", "")
+                        research_output = pipeline_data.get("research_assistant_output", "")
+                        
+                        topic_input = f"""📋 BRIEF:
+{brief_output}
+
+📊 RESEARCH DATA:
+{research_output}"""
+                        
+                        workflow.logger.info(f"🎯 DraftAssistant vstup: Brief ({len(brief_output)} chars) + Research ({len(research_output)} chars)")
+                    else:
+                        # ✅ STANDARDNÍ SEKVENČNÍ TOK pro ostatní asistenty
+                        topic_input = pipeline_data["current_output"]
+                    
                     # Spuštění assistant activity s konfiguračními parametry  
                     assistant_output = await workflow.execute_activity(
                         "execute_assistant",
                         {
                             "assistant_config": assistant,
-                            "topic": topic, 
+                            "topic": topic_input,  # 🔧 INTELIGENTNÍ TOPIC SELECTION
+                            "current_date": pipeline_data["current_date"],  # 📅 AKTUÁLNÍ DATUM PRO VŠECHNY ASISTENTY
                             "previous_outputs": {}
                         },
                         start_to_close_timeout=timedelta(seconds=600),  # 10 minut pro finální asistenty
@@ -83,17 +129,31 @@ class AssistantPipelineWorkflow:
                         heartbeat_timeout=timedelta(seconds=heartbeat),
                         retry_policy=temporalio.common.RetryPolicy(
                             initial_interval=timedelta(seconds=1),
-                            maximum_interval=timedelta(seconds=60),
-                            maximum_attempts=3,
-                            backoff_coefficient=2.0
+                            maximum_interval=timedelta(seconds=10),
+                            maximum_attempts=1,  # 🚫 ŽÁDNÉ RETRY - strict fail fast
+                            backoff_coefficient=1.0
                         )
                     )
                     
-                    # Update pipeline data s výstupem asistenta
-                    pipeline_data["current_output"] = assistant_output.get("output", "")
+                    # 🚫 STRICT OUTPUT VALIDATION - žádné fallbacky
+                    if not assistant_output:
+                        workflow.logger.error(f"❌ Asistent {assistant_name} nevrátil žádný výstup - workflow selhal")
+                        raise Exception(f"❌ Asistent {assistant_name} nevrátil žádný výstup - workflow selhal")
+                    
+                    output_content = assistant_output.get("output")
+                    if output_content is None:
+                        workflow.logger.error(f"❌ Asistent {assistant_name} nevrátil 'output' klíč - workflow selhal")
+                        raise Exception(f"❌ Asistent {assistant_name} nevrátil 'output' klíč - workflow selhal")
+                    
+                    # 🔧 INTELIGENTNÍ UPDATE PIPELINE DATA
+                    # Ukládáme výstup podle function_key pro pozdější kombinování
+                    pipeline_data[f"{function_key}_output"] = output_content
+                    
+                    # ✅ STANDARDNÍ SEKVENČNÍ TOK - aktualizace current_output
+                    pipeline_data["current_output"] = output_content
                     
                     stage_duration = workflow.now().timestamp() - stage_start
-                    workflow.logger.info(f"✅ ASSISTANT_FINISHED: {assistant_name} duration={stage_duration:.2f}s output_length={len(str(pipeline_data['current_output']))}")
+                    workflow.logger.info(f"✅ ASSISTANT_FINISHED: {assistant_name} duration={stage_duration:.2f}s output_length={len(str(output_content))}")
                     
                     # Uložení úspěšného stage logu s výstupem
                     stage_logs.append({
@@ -102,9 +162,9 @@ class AssistantPipelineWorkflow:
                         "timestamp": workflow.now().timestamp(), 
                         "duration": stage_duration,
                         "function_key": function_key,
-                        "order": assistant.get("order", 0),
-                        "output": assistant_output.get("output", ""),
-                        "metadata": assistant_output.get("metadata", {})
+                        "order": order,
+                        "output": output_content,
+                        "metadata": assistant_output.get("metadata") or {}
                     })
                     
                 except Exception as assistant_error:
@@ -118,17 +178,13 @@ class AssistantPipelineWorkflow:
                         "timestamp": workflow.now().timestamp(), 
                         "duration": stage_duration,
                         "function_key": function_key,
-                        "order": assistant.get("order", 0),
+                        "order": order,  # 🚫 ŽÁDNÝ FALLBACK - order už je validovaný výše
                         "error": str(assistant_error)
                     })
                     
-                    # Rozhodnutí o pokračování nebo ukončení
-                    if assistant.get("critical", True):  # Pokud je asistent kritický, ukončíme workflow
-                        workflow.logger.error(f"💥 CRITICAL_ASSISTANT_FAILED: {assistant_name} - ukončuji workflow")
-                        raise Exception(f"Kritický asistent {assistant_name} selhal: {str(assistant_error)}")
-                    else:
-                        workflow.logger.warning(f"⚠️ NON_CRITICAL_ASSISTANT_FAILED: {assistant_name} - pokračuji s dalším asistent")
-                        continue
+                    # 🚫 STRICT MODE - KAŽDÉ SELHÁNÍ ASISTENTA UKONČÍ WORKFLOW
+                    workflow.logger.error(f"💥 ASSISTANT_FAILED: {assistant_name} - ukončuji workflow (strict mode)")
+                    raise Exception(f"Asistent {assistant_name} selhal v strict mode: {str(assistant_error)}")
 
             # 3️⃣ Příprava finálního výsledku
             final_result = {
@@ -174,7 +230,16 @@ class AssistantPipelineWorkflow:
             total_duration = workflow.now().timestamp() - stage_logs[0]["timestamp"]
             completed_assistants = len([log for log in stage_logs if log.get("status") == "COMPLETED" and "Assistant" in log.get("stage", "")])
             
-            workflow.logger.info(f"🎉 ASSISTANT_PIPELINE_COMPLETED: total_duration={total_duration:.2f}s assistants_completed={completed_assistants}/{len(assistants)}")
+            # ✅ STRICT VALIDACE FINÁLNÍ PIPELINE - všichni načtení asistenti musí být dokončeni
+            expected_assistants = len(assistants)
+            if completed_assistants == expected_assistants:
+                workflow.logger.info(f"🎉 ASSISTANT_PIPELINE_COMPLETED: total_duration={total_duration:.2f}s assistants_completed={completed_assistants}/{expected_assistants} ✅")
+                workflow.logger.info(f"🏆 FINÁLNÍ PIPELINE ÚSPĚŠNĚ DOKONČENA - všech {expected_assistants} asistentů z databáze proběhlo!")
+            else:
+                # 🚫 STRICT MODE - pokud neproběhly všichni asistenti, je to chyba
+                error_msg = f"NEÚPLNÁ PIPELINE - očekáváno {expected_assistants} asistentů z databáze, dokončeno pouze {completed_assistants}"
+                workflow.logger.error(f"❌ {error_msg}")
+                raise Exception(error_msg)
             
             return final_result
             
@@ -192,13 +257,17 @@ class AssistantPipelineWorkflow:
                     "error": str(e)
                 })
             
-            # Vrať částečný výsledek s chybou
+            # 🚫 STRICT FAILED RESULT - žádné fallbacky
+            current_output = pipeline_data.get("current_output")
+            if current_output is None:
+                current_output = "PIPELINE_FAILED_NO_OUTPUT"
+            
             failed_result = {
                 "topic": topic,
                 "project_id": project_id,
                 "workflow_id": workflow_id,
                 "run_id": run_id,
-                "final_output": pipeline_data.get("current_output", ""),
+                "final_output": current_output,
                 "stage_logs": stage_logs,
                 "pipeline_success": False,
                 "error": str(e),

@@ -1,0 +1,7 @@
+🏭 === SEO ORCHESTRATOR WORKER ===
+📋 Produkční worker pro stabilní LLM orchestraci
+
+🔍 === PŘEDSTARTOVNÍ KONTROLA ===
+❌ CHYBA: Environment variable API_BASE_URL není nastavena
+   Řešení: export API_BASE_URL=http://localhost:8000
+💥 Worker se nespustí kvůli chybám v konfiguraci

@@ -1,0 +1,2 @@
+WARNING:activities.assistant_activities:⚠️ Centralizovaný OpenAI client není dostupný: cannot import name 'OpenAIClient' from partially initialized module 'openai_client' (most likely due to a circular import) (/Users/petrliesner/Farm new new new/activities/../backend/openai_client.py)
+INFO:__main__:✅ Simple Worker spuštěn

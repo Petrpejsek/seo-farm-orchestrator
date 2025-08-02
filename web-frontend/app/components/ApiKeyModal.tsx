@@ -9,12 +9,15 @@ interface ApiKeyModalProps {
 
 export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const [openaiKey, setOpenaiKey] = useState('')
+  const [claudeKey, setClaudeKey] = useState('')
+  const [geminiKey, setGeminiKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingKeys, setLoadingKeys] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [currentKeys, setCurrentKeys] = useState<{ [key: string]: string }>({})
+  const [activeTab, setActiveTab] = useState<'openai' | 'claude' | 'gemini'>('openai')
 
   // Načíst současné API klíče když se modal otevře
   const fetchCurrentKeys = async () => {
@@ -41,31 +44,79 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     // Reset formulář při otevření
     if (isOpen) {
       setOpenaiKey('')
+      setClaudeKey('')
+      setGeminiKey('')
       setError(null)
       setSuccess(false)
     }
   }, [isOpen])
 
+  // Validační funkce pro jednotlivé providery
+  const validateApiKey = (provider: string, key: string): string | null => {
+    if (!key.trim()) {
+      return 'API klíč nemůže být prázdný'
+    }
+
+    if (key.length > 200) {
+      return 'API klíč je příliš dlouhý (maximum 200 znaků)'
+    }
+
+    if (key.length < 10) {
+      return 'API klíč je příliš krátký (minimum 10 znaků)'
+    }
+
+    switch (provider) {
+      case 'openai':
+        if (!key.startsWith('sk-')) {
+          return 'OpenAI API klíč musí začínat "sk-"'
+        }
+        if (key.length < 20) {
+          return 'OpenAI API klíč je příliš krátký (minimum 20 znaků)'
+        }
+        break
+      
+      case 'claude':
+        if (!key.startsWith('sk-ant-')) {
+          return 'Claude API klíč musí začínat "sk-ant-"'
+        }
+        break
+      
+      case 'gemini':
+        // Gemini používá jiný formát klíče
+        if (key.includes(' ') || key.includes('\n')) {
+          return 'Gemini API klíč nesmí obsahovat mezery nebo nové řádky'
+        }
+        break
+    }
+
+    return null
+  }
+
+  const getCurrentKey = () => {
+    switch (activeTab) {
+      case 'openai': return openaiKey
+      case 'claude': return claudeKey
+      case 'gemini': return geminiKey
+      default: return ''
+    }
+  }
+
+  const setCurrentKey = (key: string) => {
+    switch (activeTab) {
+      case 'openai': setOpenaiKey(key); break
+      case 'claude': setClaudeKey(key); break
+      case 'gemini': setGeminiKey(key); break
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!openaiKey.trim()) {
-      setError('API klíč nemůže být prázdný')
-      return
-    }
-
-    if (!openaiKey.startsWith('sk-')) {
-      setError('OpenAI API klíč musí začínat "sk-"')
-      return
-    }
-
-    if (openaiKey.length > 200) {
-      setError('API klíč je příliš dlouhý (maximum 200 znaků)')
-      return
-    }
-
-    if (openaiKey.length < 20) {
-      setError('API klíč je příliš krátký (minimum 20 znaků)')
+    const currentKey = getCurrentKey()
+    const validationError = validateApiKey(activeTab, currentKey)
+    
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -81,14 +132,14 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          service: 'openai',
-          api_key: openaiKey
+          service: activeTab,
+          api_key: currentKey
         })
       })
 
       if (response.ok) {
         setSuccess(true)
-        setOpenaiKey('')
+        setCurrentKey('') // Reset current tab key
         // Refresh API keys list
         fetchCurrentKeys()
         
@@ -186,21 +237,71 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
             )}
           </div>
 
+          {/* Tabs pro různé providery */}
+          <div className="mb-4">
+            <div className="flex border-b border-gray-200">
+              <button
+                type="button"
+                onClick={() => setActiveTab('openai')}
+                className={`px-4 py-2 text-sm font-medium ${
+                  activeTab === 'openai'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                🤖 OpenAI
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('claude')}
+                className={`px-4 py-2 text-sm font-medium ${
+                  activeTab === 'claude'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                🧠 Claude
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('gemini')}
+                className={`px-4 py-2 text-sm font-medium ${
+                  activeTab === 'gemini'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                💎 Gemini
+              </button>
+            </div>
+          </div>
+
           {/* Formulář pro nový/aktualizaci klíče */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="openai-key" className="block text-sm font-medium text-gray-700 mb-2">
-                OpenAI API Key
+              <label htmlFor={`${activeTab}-key`} className="block text-sm font-medium text-gray-700 mb-2">
+                {activeTab === 'openai' && '🤖 OpenAI API Key'}
+                {activeTab === 'claude' && '🧠 Claude API Key'}
+                {activeTab === 'gemini' && '💎 Gemini API Key'}
               </label>
               <input
-                id="openai-key"
+                id={`${activeTab}-key`}
                 type="password"
-                value={openaiKey}
-                onChange={(e) => setOpenaiKey(e.target.value)}
-                placeholder="sk-..."
+                value={getCurrentKey()}
+                onChange={(e) => setCurrentKey(e.target.value)}
+                placeholder={
+                  activeTab === 'openai' ? 'sk-...' :
+                  activeTab === 'claude' ? 'sk-ant-...' :
+                  'AIza...'
+                }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {activeTab === 'openai' && 'Klíč musí začínat "sk-" a najdete jej na platform.openai.com'}
+                {activeTab === 'claude' && 'Klíč musí začínat "sk-ant-" a najdete jej na console.anthropic.com'}
+                {activeTab === 'gemini' && 'API klíč najdete na makersuite.google.com nebo console.cloud.google.com'}
+              </p>
             </div>
 
             {/* Error message */}
@@ -228,10 +329,10 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={loading || !openaiKey.trim()}
+                disabled={loading || !getCurrentKey().trim()}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               >
-                {loading ? '⏳ Ukládám...' : '💾 Uložit'}
+                {loading ? '⏳ Ukládám...' : `💾 Uložit ${activeTab.toUpperCase()} klíč`}
               </button>
             </div>
           </form>

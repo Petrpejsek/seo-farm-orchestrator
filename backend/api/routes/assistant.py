@@ -1,18 +1,21 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, field_validator
-from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, field_validator, model_validator, Field, constr
+from typing import Optional, Dict, Any, List, Annotated
 from datetime import datetime
 import uuid
+import logging
 
 from ..database import get_prisma_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["assistants"])
 
 # Pydantic modely pro API
 class AssistantCreate(BaseModel):
     projectId: str
-    name: str
-    functionKey: str
+    name: constr(min_length=1, strip_whitespace=True) = Field(description="Název asistenta nesmí být prázdný")
+    functionKey: constr(min_length=1, strip_whitespace=True) = Field(description="Function key asistenta nesmí být prázdný")
     inputType: str = "string"
     outputType: str = "string"
     order: int
@@ -21,11 +24,12 @@ class AssistantCreate(BaseModel):
     active: bool = True
     description: Optional[str] = None
     
-    # OpenAI parametry s defaulty
+    # LLM Provider & Model parametry s defaulty
+    model_provider: str = "openai"
     model: str = "gpt-4o"
     temperature: float = 0.7
     top_p: float = 0.9
-    max_tokens: int = 800
+    max_tokens: Optional[int] = -1  # -1 = neomezeno, jinak kladné číslo
     system_prompt: Optional[str] = None
     
     # UX metadata pro admina
@@ -33,14 +37,101 @@ class AssistantCreate(BaseModel):
     style_description: Optional[str] = None
     pipeline_stage: Optional[str] = None
     
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        """🚫 STRICT NAME VALIDATION - žádné fallbacky, žádné whitespace"""
+        if not v:
+            raise ValueError("Název asistenta je povinný")
+        v_stripped = v.strip()
+        if len(v_stripped) == 0:
+            raise ValueError("Název asistenta nesmí být prázdný nebo obsahovat pouze mezery")
+        if len(v_stripped) < 1:
+            raise ValueError("Název asistenta musí mít alespoň 1 znak")
+        return v_stripped
+    
+    @field_validator('functionKey')
+    @classmethod
+    def validate_function_key(cls, v: str) -> str:
+        """🚫 STRICT FUNCTION KEY VALIDATION - žádné fallbacky, žádné whitespace"""
+        if not v:
+            raise ValueError("Function key asistenta je povinný")
+        v_stripped = v.strip()
+        if len(v_stripped) == 0:
+            raise ValueError("Function key asistenta nesmí být prázdný nebo obsahovat pouze mezery")
+        if len(v_stripped) < 1:
+            raise ValueError("Function key asistenta musí mít alespoň 1 znak")
+        return v_stripped
+
+    @field_validator('model_provider')
+    @classmethod
+    def validate_model_provider(cls, v: str) -> str:
+        """🚫 STRICT MODEL PROVIDER VALIDATION - žádné fallbacky"""
+        if not v:
+            raise ValueError("Model provider je povinný")
+        v_stripped = v.strip()
+        if len(v_stripped) == 0:
+            raise ValueError("Model provider nesmí být prázdný")
+        allowed_providers = ["openai", "claude", "gemini"]
+        if v_stripped.lower() not in allowed_providers:
+            raise ValueError(f"Model provider musí být jeden z: {', '.join(allowed_providers)}")
+        return v_stripped.lower()
+    
     @field_validator('model')
     @classmethod
-    def validate_model(cls, v: str) -> str:
-        """Validace OpenAI modelu"""
-        allowed_models = ["gpt-4o", "gpt-4", "gpt-3.5-turbo"]
-        if v not in allowed_models:
-            raise ValueError(f"Model musí být jeden z: {', '.join(allowed_models)}")
-        return v
+    def validate_model(cls, v: str, info) -> str:
+        """🚫 STRICT MODEL VALIDATION - žádné fallbacky"""
+        if not v:
+            raise ValueError("Model je povinný")
+        v_stripped = v.strip()
+        if len(v_stripped) == 0:
+            raise ValueError("Model nesmí být prázdný nebo obsahovat pouze mezery")
+        
+        # Import zde aby se předešlo circular imports
+        try:
+            from llm_clients.factory import LLMClientFactory
+            
+            # 🚫 STRICT - Provider MUSÍ být specifikován, žádný fallback
+            provider = None
+            if hasattr(info, 'data') and 'model_provider' in info.data:
+                provider = info.data['model_provider']
+            
+            if not provider:
+                raise ValueError("Model provider musí být specifikován před validací modelu")
+            
+            # Validace modelu pro daný provider
+            if not LLMClientFactory.validate_model_for_provider(provider, v_stripped):
+                supported_models = LLMClientFactory.get_all_models().get(provider, {})
+                all_models = []
+                for model_list in supported_models.values():
+                    all_models.extend(model_list)
+                raise ValueError(f"Model '{v_stripped}' není podporován providerem '{provider}'. Podporované: {all_models}")
+        except ImportError as e:
+            # 🚫 ŽÁDNÝ FALLBACK - pokud LLMClientFactory není dostupný, API nesmí fungovat
+            raise ValueError(f"LLM Client Factory není dostupný - backend není správně nakonfigurován: {e}")
+        
+        return v_stripped
+    
+    @model_validator(mode='after')
+    def validate_model_provider_compatibility(self) -> 'AssistantCreate':
+        """Cross-field validace: model musí odpovídat model_provider"""
+        if self.model and self.model_provider:
+            try:
+                from llm_clients.factory import LLMClientFactory
+                
+                if not LLMClientFactory.validate_model_for_provider(self.model_provider, self.model):
+                    supported_models = LLMClientFactory.get_all_models().get(self.model_provider, {})
+                    all_models = []
+                    for model_list in supported_models.values():
+                        all_models.extend(model_list)
+                    
+                    raise ValueError(f"Model '{self.model}' není kompatibilní s providerem '{self.model_provider}'. "
+                                   f"Podporované modely pro {self.model_provider}: {all_models}")
+            except ImportError as e:
+                # 🚫 ŽÁDNÝ FALLBACK - pokud LLMClientFactory není dostupný, validace musí selhat
+                raise ValueError(f"LLM Client Factory není dostupný pro cross-field validaci - backend není správně nakonfigurován: {e}")
+        
+        return self
     
     @field_validator('temperature')
     @classmethod
@@ -60,10 +151,10 @@ class AssistantCreate(BaseModel):
     
     @field_validator('max_tokens')
     @classmethod
-    def validate_max_tokens(cls, v: int) -> int:
-        """Validace max_tokens parametru"""
-        if not 100 <= v <= 4000:
-            raise ValueError("Max_tokens musí být mezi 100 a 4000")
+    def validate_max_tokens(cls, v: Optional[int]) -> Optional[int]:
+        """Validace max_tokens parametru - -1 = neomezeno, jinak kladné číslo"""
+        if v is not None and v != -1 and v < 1:
+            raise ValueError("Max_tokens musí být kladné číslo nebo -1 pro neomezeno")
         return v
     
     @field_validator('system_prompt')
@@ -111,7 +202,8 @@ class AssistantUpdate(BaseModel):
     active: Optional[bool] = None
     description: Optional[str] = None
     
-    # OpenAI parametry
+    # LLM Provider & Model parametry
+    model_provider: Optional[str] = None
     model: Optional[str] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
@@ -123,15 +215,69 @@ class AssistantUpdate(BaseModel):
     style_description: Optional[str] = None
     pipeline_stage: Optional[str] = None
     
+    @field_validator('model_provider')
+    @classmethod
+    def validate_model_provider(cls, v: Optional[str]) -> Optional[str]:
+        """Validace LLM provideru"""
+        if v is not None:
+            allowed_providers = ["openai", "claude", "gemini"]
+            if v.lower() not in allowed_providers:
+                raise ValueError(f"Model provider musí být jeden z: {', '.join(allowed_providers)}")
+            return v.lower()
+        return v
+
     @field_validator('model')
     @classmethod
     def validate_model(cls, v: Optional[str]) -> Optional[str]:
-        """Validace OpenAI modelu"""
+        """Validace modelu podle provideru (dynamická validace pro UPDATE)"""
         if v is not None:
-            allowed_models = ["gpt-4o", "gpt-4", "gpt-3.5-turbo"]
-            if v not in allowed_models:
-                raise ValueError(f"Model musí být jeden z: {', '.join(allowed_models)}")
+            if not v or len(v.strip()) == 0:
+                raise ValueError("Model nesmí být prázdný")
+            
+            # Pro UPDATE operace budeme tolerantnější - nemusíme mít přístup k model_provider
+            # Základní validace: model musí být v seznamu všech podporovaných modelů
+            try:
+                from llm_clients.factory import LLMClientFactory
+                
+                all_models_dict = LLMClientFactory.get_all_models()
+                all_models = []
+                for provider_models in all_models_dict.values():
+                    for model_list in provider_models.values():
+                        all_models.extend(model_list)
+                
+                if v not in all_models:
+                    raise ValueError(f"Model '{v}' není podporován žádným providerem. Podporované modely: {sorted(set(all_models))}")
+                    
+            except ImportError:
+                # Fallback validace pokud LLMClientFactory není dostupný
+                basic_models = ["gpt-4o", "gpt-4", "gpt-3.5-turbo", "dall-e-3", "dall-e-2", 
+                              "claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307",
+                              "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"]
+                if v not in basic_models:
+                    logger.warning(f"⚠️ Používám fallback validaci pro model: {v}")
+                    raise ValueError(f"Model '{v}' není v seznamu fallback modelů: {basic_models}")
+        
         return v
+    
+    @model_validator(mode='after')
+    def validate_model_provider_compatibility(self) -> 'AssistantUpdate':
+        """Cross-field validace: model musí odpovídat model_provider (pokud jsou oba zadané)"""
+        if self.model and self.model_provider:
+            try:
+                from llm_clients.factory import LLMClientFactory
+                
+                if not LLMClientFactory.validate_model_for_provider(self.model_provider, self.model):
+                    supported_models = LLMClientFactory.get_all_models().get(self.model_provider, {})
+                    all_models = []
+                    for model_list in supported_models.values():
+                        all_models.extend(model_list)
+                    
+                    raise ValueError(f"Model '{self.model}' není kompatibilní s providerem '{self.model_provider}'. "
+                                   f"Podporované modely pro {self.model_provider}: {all_models}")
+            except ImportError:
+                logger.warning("⚠️ LLMClientFactory nedostupný, přeskakuji cross-field validaci pro UPDATE")
+        
+        return self
     
     @field_validator('temperature')
     @classmethod
@@ -156,10 +302,9 @@ class AssistantUpdate(BaseModel):
     @field_validator('max_tokens')
     @classmethod
     def validate_max_tokens(cls, v: Optional[int]) -> Optional[int]:
-        """Validace max_tokens parametru"""
-        if v is not None:
-            if not 100 <= v <= 4000:
-                raise ValueError("Max_tokens musí být mezi 100 a 4000")
+        """Validace max_tokens parametru - -1 = neomezeno, jinak kladné číslo"""
+        if v is not None and v != -1 and v < 1:
+            raise ValueError("Max_tokens musí být kladné číslo nebo -1 pro neomezeno")
         return v
     
     @field_validator('system_prompt')
@@ -191,7 +336,7 @@ class AssistantUpdate(BaseModel):
         if v is not None:
             if len(v.strip()) == 0:
                 return None  # Prázdný string převést na None
-            allowed_stages = ["brief", "research", "factvalidation", "draft", "humanizer", "seo", "multimedia", "qa", "publish"]
+            allowed_stages = ["brief", "research", "factvalidation", "draft", "humanizer", "seo", "multimedia", "qa", "image", "publish"]
             if v not in allowed_stages:
                 raise ValueError(f"Pipeline stage musí být jeden z: {', '.join(allowed_stages)}")
         return v
@@ -209,7 +354,8 @@ class AssistantResponse(BaseModel):
     active: bool
     description: Optional[str] = None
     
-    # OpenAI parametry
+    # LLM Provider & Model parametry
+    model_provider: str
     model: str
     temperature: float
     top_p: float
@@ -224,126 +370,112 @@ class AssistantResponse(BaseModel):
     createdAt: datetime
     updatedAt: datetime
 
-# Předkonfigurované funkce dostupné pro asistenty
-AVAILABLE_FUNCTIONS = {
-    "brief_assistant": {
-        "name": "BriefAssistant",
-        "description": "Transformuje volně zadané téma na SEO-ready zadání s metadaty",
-        "inputType": "string",
-        "outputType": "dict",
-        "defaultTimeout": 60,
-        "defaultHeartbeat": 15
-    },
-    "research_assistant": {
-        "name": "ResearchAssistant",
-        "description": "Provádí online research a shromažďuje podklady k zadanému tématu",
-        "inputType": "string",
-        "outputType": "dict",
-        "defaultTimeout": 120,
-        "defaultHeartbeat": 30
-    },
-    "fact_validator_assistant": {
-        "name": "FactValidatorAssistant",
-        "description": "Validuje fakta a kontroluje přesnost informací v contentu",
-        "inputType": "dict",
-        "outputType": "dict",
-        "defaultTimeout": 90,
-        "defaultHeartbeat": 20
-    },
-    "draft_assistant": {
-        "name": "DraftAssistant",
-        "description": "Vytváří první draft článku na základě research dat a briefu",
-        "inputType": "dict",
-        "outputType": "string",
-        "defaultTimeout": 180,
-        "defaultHeartbeat": 45
-    },
-    "humanizer_assistant": {
-        "name": "HumanizerAssistant",
-        "description": "Humanizuje AI-generovaný content pro přirozenější čtení",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 120,
-        "defaultHeartbeat": 30
-    },
-    "seo_assistant": {
-        "name": "SEOAssistant",
-        "description": "Optimalizuje content pro vyhledávače (meta tagy, klíčová slova, struktura)",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 90,
-        "defaultHeartbeat": 20
-    },
-    "multimedia_assistant": {
-        "name": "MultimediaAssistant",
-        "description": "Generuje multimedia elementy (obrazky, video nápady, infografiky)",
-        "inputType": "string",
-        "outputType": "dict",
-        "defaultTimeout": 150,
-        "defaultHeartbeat": 35
-    },
-    "qa_assistant": {
-        "name": "QAAssistant",
-        "description": "Kontroluje kvalitu, gramatiku a konzistenci finálního obsahu",
-        "inputType": "string",
-        "outputType": "dict",
-        "defaultTimeout": 90,
-        "defaultHeartbeat": 20
-    },
-    "publish_assistant": {
-        "name": "PublishAssistant",
-        "description": "Připravuje content pro publikaci a zajišťuje finální formátování",
-        "inputType": "dict",
-        "outputType": "string",
-        "defaultTimeout": 60,
-        "defaultHeartbeat": 15
-    },
-    "generate_llm_friendly_content": {
-        "name": "Content Generator",
-        "description": "Generuje AI-friendly SEO obsah pomocí OpenAI Assistant",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 120,
-        "defaultHeartbeat": 30
-    },
-    "inject_structured_markup": {
-        "name": "Structured Markup",
-        "description": "Přidávává JSON-LD schema markup",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 60,
-        "defaultHeartbeat": 15
-    },
-    "enrich_with_entities": {
-        "name": "Entity Enrichment",
-        "description": "Obohacuje obsah o entity linking",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 60,
-        "defaultHeartbeat": 15
-    },
-    "add_conversational_faq": {
-        "name": "FAQ Generator",
-        "description": "Přidává konverzační FAQ sekce",
-        "inputType": "string",
-        "outputType": "string",
-        "defaultTimeout": 60,
-        "defaultHeartbeat": 15
-    },
-    "save_output_to_json": {
-        "name": "JSON Output Saver",
-        "description": "Ukládá finální výstup do JSON souboru",
-        "inputType": "dict",
-        "outputType": "string",
-        "defaultTimeout": 30,
-        "defaultHeartbeat": 10
-    }
-}
+async def get_available_function_keys():
+    """Získání seznam funkčních klíčů ze všech asistentů v databázi"""
+    try:
+        prisma = await get_prisma_client()
+        
+        # Získání unikátních function keys ze všech asistentů
+        assistants = await prisma.assistant.find_many(
+            distinct=['functionKey']
+        )
+        
+        # Vytvoření formátu kompatibilního s frontend
+        functions = {}
+        for assistant in assistants:
+            functions[assistant.functionKey] = {
+                "name": assistant.name,
+                "description": assistant.description or f"AI asistent typu {assistant.name}",
+                "inputType": assistant.inputType,
+                "outputType": assistant.outputType,
+                "defaultTimeout": assistant.timeout or 60,
+                "defaultHeartbeat": assistant.heartbeat or 15
+            }
+        
+        return functions
+        
+    except Exception as e:
+        # Fallback v případě chyby databáze - vrátí prázdný seznam
+        logger.error(f"❌ Chyba při načítání function keys z databáze: {str(e)}")
+        return {}
 
 @router.get("/assistant-functions")
 async def get_available_functions():
-    """Získání seznamu dostupných funkcí pro asistenty"""
-    return {"functions": AVAILABLE_FUNCTIONS}
+    """Získání seznamu dostupných funkcí pro asistenty z databáze"""
+    functions = await get_available_function_keys()
+    return {"functions": functions}
+
+@router.get("/llm-providers")
+async def get_llm_providers():
+    """Získání seznamu podporovaných LLM providerů"""
+    try:
+        from llm_clients.factory import LLMClientFactory
+        
+        providers = LLMClientFactory.get_supported_providers()
+        all_models = LLMClientFactory.get_all_models()
+        
+        # Vytvoří strukturu pro frontend
+        provider_data = {}
+        for provider in providers:
+            provider_data[provider] = {
+                "name": provider.title(),
+                "models": all_models.get(provider, {"text": [], "image": []}),
+                "supported_parameters": LLMClientFactory.get_provider_parameters(provider)
+            }
+        
+        return {
+            "providers": provider_data,
+            "default_provider": "openai"
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Chyba při načítání LLM providerů: {str(e)}")
+        # Fallback data
+        return {
+            "providers": {
+                "openai": {
+                    "name": "OpenAI",
+                    "models": {
+                        "text": ["gpt-4o", "gpt-4", "gpt-3.5-turbo"],
+                        "image": ["dall-e-3", "dall-e-2"]
+                    },
+                    "supported_parameters": ["temperature", "max_tokens", "top_p", "system_prompt"]
+                }
+            },
+            "default_provider": "openai"
+        }
+
+@router.get("/llm-providers/{provider}/models")
+async def get_provider_models(provider: str):
+    """Získání modelů pro konkrétní provider"""
+    try:
+        from llm_clients.factory import LLMClientFactory
+        
+        provider = provider.lower()
+        if provider not in LLMClientFactory.get_supported_providers():
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Provider '{provider}' není podporován"
+            )
+        
+        all_models = LLMClientFactory.get_all_models()
+        models = all_models.get(provider, {"text": [], "image": []})
+        parameters = LLMClientFactory.get_provider_parameters(provider)
+        
+        return {
+            "provider": provider,
+            "models": models,
+            "supported_parameters": parameters
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Chyba při načítání modelů pro {provider}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chyba při načítání modelů: {str(e)}"
+        )
 
 @router.post("/assistant", response_model=AssistantResponse)
 async def create_assistant(assistant: AssistantCreate):
@@ -366,16 +498,28 @@ async def create_assistant(assistant: AssistantCreate):
         if existing_assistant:
             raise HTTPException(status_code=400, detail=f"Pořadí {assistant.order} už existuje v tomto projektu")
         
-        # Kontrola validity funkce
-        if assistant.functionKey not in AVAILABLE_FUNCTIONS:
-            raise HTTPException(status_code=400, detail=f"Neznámá funkce: {assistant.functionKey}")
+        # 🚫 STRICT VALIDACE - žádné fallbacky pro kritická pole
+        # Pydantic constr validace už kontroluje prázdné stringy, ale ponecháváme explicitní kontroly pro jistotu
         
-        # Vytvoření nového asistenta
+        if not assistant.functionKey or len(assistant.functionKey.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Function key asistenta je povinný a nesmí být prázdný")
+        
+        if not assistant.model_provider or len(assistant.model_provider.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Model provider je povinný a nesmí být prázdný")
+        
+        if not assistant.model or len(assistant.model.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Model je povinný a nesmí být prázdný")
+        
+        # 🔧 SPECIÁLNÍ HANDLING PRO max_tokens při vytváření:
+        # Pokud frontend nepošle max_tokens (prázdné pole), použijeme -1 pro "neomezeno"
+        max_tokens_value = assistant.max_tokens if assistant.max_tokens is not None else -1
+        
+        # Vytvoření nového asistenta s trimovanými hodnotami
         new_assistant = await prisma.assistant.create(
             data={
                 "projectId": assistant.projectId,
-                "name": assistant.name,
-                "functionKey": assistant.functionKey,
+                "name": assistant.name.strip(),
+                "functionKey": assistant.functionKey.strip(),
                 "inputType": assistant.inputType,
                 "outputType": assistant.outputType,
                 "order": assistant.order,
@@ -384,11 +528,12 @@ async def create_assistant(assistant: AssistantCreate):
                 "active": assistant.active,
                 "description": assistant.description,
                 
-                # OpenAI parametry
-                "model": assistant.model,
+                # LLM Provider & Model parametry
+                "model_provider": assistant.model_provider.strip(),
+                "model": assistant.model.strip(),
                 "temperature": assistant.temperature,
                 "top_p": assistant.top_p,
-                "max_tokens": assistant.max_tokens,
+                "max_tokens": max_tokens_value,  # NULL pokud nebyl poslán nebo je None
                 "system_prompt": assistant.system_prompt,
                 
                 # UX metadata
@@ -419,7 +564,7 @@ async def get_project_assistants(project_id: str):
         # Získání asistentů seřazených podle pořadí
         assistants = await prisma.assistant.find_many(
             where={"projectId": project_id},
-            order_by={"order": "asc"}
+            order={"order": "asc"}
         )
         
         return [AssistantResponse(**assistant.dict()) for assistant in assistants]
@@ -469,12 +614,27 @@ async def update_assistant(assistant_id: str, assistant_update: AssistantUpdate)
             if existing_assistant:
                 raise HTTPException(status_code=400, detail=f"Pořadí {assistant_update.order} už existuje v tomto projektu")
         
-        # Kontrola validity funkce
-        if assistant_update.functionKey is not None and assistant_update.functionKey not in AVAILABLE_FUNCTIONS:
-            raise HTTPException(status_code=400, detail=f"Neznámá funkce: {assistant_update.functionKey}")
+        # 🚫 STRICT VALIDACE pro update - žádné fallbacky pro kritická pole
+        if assistant_update.name is not None and (not assistant_update.name or len(assistant_update.name.strip()) == 0):
+            raise HTTPException(status_code=400, detail="Název asistenta nesmí být prázdný")
+        
+        if assistant_update.functionKey is not None and (not assistant_update.functionKey or len(assistant_update.functionKey.strip()) == 0):
+            raise HTTPException(status_code=400, detail="Function key asistenta nesmí být prázdný")
+        
+        if assistant_update.model_provider is not None and (not assistant_update.model_provider or len(assistant_update.model_provider.strip()) == 0):
+            raise HTTPException(status_code=400, detail="Model provider nesmí být prázdný")
+        
+        if assistant_update.model is not None and (not assistant_update.model or len(assistant_update.model.strip()) == 0):
+            raise HTTPException(status_code=400, detail="Model nesmí být prázdný")
         
         # Aktualizace asistenta
         update_data = assistant_update.dict(exclude_unset=True)
+        
+        # 🔧 SPECIÁLNÍ HANDLING PRO max_tokens: 
+        # Pokud frontend nepošle max_tokens (prázdné pole), nastavíme explicitně -1 pro "neomezeno"
+        if 'max_tokens' not in update_data:  # frontend neposlal max_tokens vůbec
+            update_data['max_tokens'] = -1  # explicitně nastavíme -1 = neomezeno
+        
         updated_assistant = await prisma.assistant.update(
             where={"id": assistant_id},
             data=update_data
@@ -563,89 +723,14 @@ async def bulk_create_assistants(project_id: str):
         if existing_assistants:
             return {"message": "Asistenti už existují", "count": len(existing_assistants)}
         
-        # Definice výchozích asistentů
-        default_assistants = [
-            {
-                "name": "BriefAssistant",
-                "functionKey": "brief_assistant",
-                "inputType": "string",
-                "outputType": "dict",
-                "order": 1,
-                "timeout": 60,
-                "heartbeat": 15,
-                "active": True,
-                "description": "Transformuje volně zadané téma na SEO-ready zadání s metadaty",
-                "model": "gpt-4o",
-                "temperature": 0.8,
-                "top_p": 0.9,
-                "max_tokens": 800,
-                "system_prompt": "Jsi expert na SEO a content marketing. Tvým úkolem je transformovat volně zadaná témata na precizní SEO zadání s jasně definovanými metadaty. Zaměř se na search intent, target audience a keyword strategy."
-            },
-            {
-                "name": "Content Generator",
-                "functionKey": "generate_llm_friendly_content",
-                "inputType": "string",
-                "outputType": "string",
-                "order": 2,
-                "timeout": 120,
-                "heartbeat": 30,
-                "active": True,
-                "description": "Generuje AI-friendly SEO obsah",
-                "model": "gpt-4o",
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "max_tokens": 2000,
-                "system_prompt": "Jsi profesionální SEO copywriter. Vytváříš kvalitní, SEO-optimalizovaný obsah který je zároveň přirozeně čitelný pro uživatele. Dodržuj SEO best practices a E-A-T principy."
-            },
-            {
-                "name": "Structured Markup",
-                "functionKey": "inject_structured_markup",
-                "inputType": "string",
-                "outputType": "string",
-                "order": 3,
-                "timeout": 60,
-                "heartbeat": 15,
-                "active": True,
-                "description": "Přidává JSON-LD schema",
-                "model": "gpt-4o",
-                "temperature": 0.3,
-                "top_p": 0.8,
-                "max_tokens": 1000,
-                "system_prompt": "Jsi expert na strukturovaná data a JSON-LD schema markup. Tvým úkolem je přidat správné Schema.org markup do obsahu pro lepší SEO výsledky."
-            },
-            {
-                "name": "JSON Output",
-                "functionKey": "save_output_to_json",
-                "inputType": "dict",
-                "outputType": "string",
-                "order": 4,
-                "timeout": 30,
-                "heartbeat": 10,
-                "active": True,
-                "description": "Ukládá finální výstup",
-                "model": "gpt-4o",
-                "temperature": 0.1,
-                "top_p": 0.7,
-                "max_tokens": 500,
-                "system_prompt": "Jsi technický specialist pro export dat. Tvým úkolem je správně formátovat a uložit finální výstup do JSON struktury."
-            }
-        ]
-        
-        # Vytvoření asistentů
-        created_assistants = []
-        for assistant_data in default_assistants:
-            assistant = await prisma.assistant.create(
-                data={
-                    **assistant_data,
-                    "projectId": project_id
-                }
-            )
-            created_assistants.append(assistant)
-        
-        return {
-            "message": f"Vytvořeno {len(created_assistants)} výchozích asistentů",
-            "count": len(created_assistants)
-        }
+        # STRIKTNÍ PŘÍSTUP: Žádné hardcoded výchozí asistenti
+        # Uživatel musí explicitně vytvořit asistenty podle své konfigurace
+        raise HTTPException(
+            status_code=400, 
+            detail="Automatické vytváření výchozích asistentů není podporováno. "
+                   "Prosím, vytvořte asistenty manuálně podle vaší konfigurace projektu. "
+                   "Tím zajistíte přesnou shodu mezi UI a workflow konfigurací."
+        )
         
     except HTTPException:
         raise

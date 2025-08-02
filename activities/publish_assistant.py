@@ -27,6 +27,17 @@ async def publish_assistant(input_data: Dict[str, Any], assistant_id: Optional[s
     """Připravuje content pro publikaci a zajišťuje finální formátování."""
     
     logger.info(f"🚀 PublishAssistant připravuje k publikaci: {len(str(input_data))} znaků")
+    logger.info(f"🔍 PublishAssistant input_data keys: {list(input_data.keys()) if isinstance(input_data, dict) else 'Not a dict'}")
+    
+    # 🔧 OPRAVA: Inicializace OpenAI client
+    from utils.api_keys import get_api_key
+    
+    api_key = get_api_key("openai")
+    if not api_key:
+        logger.error("❌ OpenAI API klíč není k dispozici pro PublishAssistant")
+        return "Chyba: OpenAI API klíč není k dispozici"
+        
+    client = OpenAI(api_key=api_key)
     
     default_params = {
         "model": "gpt-4o",
@@ -51,29 +62,59 @@ async def publish_assistant(input_data: Dict[str, Any], assistant_id: Optional[s
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů: {e}")
     
-    # Extrakce obsahu z input_data
-    content = ""
+    # 🔧 OPRAVA: Správný parsing výstupů od asistentů 
+    # Input_data obsahuje všechny výstupy z pipeline jako {assistant_name: {output: "...", metadata: {...}}}
+    
+    logger.info(f"🔍 DEBUG: input_data type: {type(input_data)}")
+    logger.info(f"🔍 DEBUG: input_data sample: {str(input_data)[:500]}...")
+    
+    # Extrahuj výstupy od jednotlivých asistentů
+    seo_output = ""
+    humanized_content = ""
     qa_results = {}
-    seo_content = ""
+    multimedia_data = ""
     
     if isinstance(input_data, dict):
-        # Priorita: finální optimalizovaný content
-        if 'seo_optimized_content' in input_data:
-            content = input_data['seo_optimized_content']
-        elif 'humanized_content' in input_data:
-            content = input_data['humanized_content']
-        elif 'draft_content' in input_data:
-            content = input_data['draft_content']
-        elif 'content' in input_data:
-            content = input_data['content']
-        else:
-            # Pokusíme se najít největší string hodnotu
+        # Hledej výstupy od klíčových asistentů
+        for assistant_name, assistant_data in input_data.items():
+            if isinstance(assistant_data, dict) and "output" in assistant_data:
+                output = assistant_data["output"]
+                
+                if "seo" in assistant_name.lower():
+                    seo_output = output
+                    logger.info(f"✅ Nalezen SEO output: {len(output)} znaků")
+                elif "humanizer" in assistant_name.lower():
+                    humanized_content = output
+                    logger.info(f"✅ Nalezen Humanizer output: {len(output)} znaků")
+                elif "qa" in assistant_name.lower():
+                    # QA může být JSON string
+                    try:
+                        qa_results = json.loads(output) if isinstance(output, str) else output
+                        logger.info(f"✅ Nalezen QA output: {len(str(qa_results))} znaků")
+                    except:
+                        qa_results = {"raw": output}
+                elif "multimedia" in assistant_name.lower():
+                    multimedia_data = output
+                    logger.info(f"✅ Nalezen Multimedia output: {len(output)} znaků")
+    
+    # Priorita pro obsah: SEO > Humanized > největší dostupný obsah
+    content = ""
+    if seo_output and len(seo_output) > 100:
+        content = seo_output
+        logger.info("📄 Používám SEO optimalizovaný obsah")
+    elif humanized_content and len(humanized_content) > 100:
+        content = humanized_content  
+        logger.info("📄 Používám humanizovaný obsah")
+    else:
+        # Fallback - hledej největší textový obsah
+        logger.warning("⚠️ Hledám fallback obsah...")
+        if isinstance(input_data, dict):
             for key, value in input_data.items():
-                if isinstance(value, str) and len(value) > len(content):
-                    content = value
-        
-        # QA výsledky pro finální kontrolu
-        qa_results = input_data.get('qa_results', {})
+                if isinstance(value, dict) and "output" in value:
+                    output = value["output"]
+                    if isinstance(output, str) and len(output) > len(content):
+                        content = output
+                        logger.info(f"📄 Fallback obsah z {key}: {len(content)} znaků")
     
     if not content:
         content = json.dumps(input_data, ensure_ascii=False)

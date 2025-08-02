@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -21,18 +22,32 @@ from api.database import get_prisma_client
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# FastAPI instance
+# Lifespan context manager pro startup/shutdown události
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await connect_database()
+    logger.info("✅ Databáze připojena při startu")
+    yield
+    # Shutdown
+    await disconnect_database()
+    logger.info("🔄 Databáze odpojená při ukončení")
+
+# FastAPI instance s lifespan
 app = FastAPI(
     title="SEO Farm Orchestrator Backend",
     description="FastAPI backend s Temporal.io integrací pro SEO content generation",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan
 )
 
 # CORS middleware - povolení přístupu z frontendu
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3001",  # Frontend development server
+        "http://localhost:3000",  # Frontend development server (primary)
+        "http://localhost:3001",  # Frontend development server (fallback)
+        "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
     ],
     allow_credentials=True,
@@ -66,14 +81,7 @@ app.include_router(assistant_router)
 app.include_router(workflow_run_router)
 app.include_router(api_keys_router)
 
-# Připojení k databázi při startu
-@app.on_event("startup")
-async def startup():
-    await connect_database()
-
-@app.on_event("shutdown") 
-async def shutdown():
-    await disconnect_database()
+# Databázové připojení je nyní spravováno přes lifespan context manager
 
 @app.get("/")
 async def root():
@@ -137,11 +145,8 @@ async def pipeline_run(request: PipelineRequest):
         # Vytvoření záznamu v databázi pokud je zadán project_id
         if request.project_id:
             try:
-                # Import WorkflowRunCreate modelu
-                import sys
-                import os
-                sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-                from api.routes.workflow_run import WorkflowRunCreate
+                # Import WorkflowRunCreate modelu a create_workflow_run funkce
+                from api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
                 
                 # Vytvoření záznamu workflow run v databázi
                 workflow_run_data = WorkflowRunCreate(
@@ -151,17 +156,17 @@ async def pipeline_run(request: PipelineRequest):
                     workflowId=workflow_id
                 )
                 
-                # Simulované vytvoření záznamu (workflow_run_router má vlastní in-memory databázi)
-                # V budoucnu by to mělo jít přes Prisma do skutečné databáze
-                logger.info(f"💾 Vytvářím záznam v databázi:")
+                logger.info(f"💾 Ukládám workflow do databáze:")
                 logger.info(f"   📝 Topic: {request.topic}")
                 logger.info(f"   🏗️ Project ID: {request.project_id}")
                 logger.info(f"   🆔 Workflow ID: {workflow_id}")
                 logger.info(f"   🏃 Run ID: {run_id}")
                 
-                # Pro účely logu označíme jako vytvořený
-                database_id = f"generated-for-{run_id[:8]}"
-                logger.info(f"✅ Databázový záznam vytvořen s ID: {database_id}")
+                # Skutečné volání API endpointu pro vytvoření databázového záznamu
+                workflow_response = await create_workflow_run(workflow_run_data)
+                database_id = workflow_response.id
+                
+                logger.info(f"✅ Workflow run skutečně vytvořen v databázi s ID: {database_id}")
                 
             except Exception as e:
                 logger.error(f"⚠️ Chyba při vytváření databázového záznamu: {str(e)}")
@@ -265,8 +270,11 @@ async def get_workflow_result_endpoint(
         # Nejdřív získáme základní výsledek workflow
         result_data = await get_workflow_result(workflow_id=workflow_id, run_id=run_id)
         
-        # Pokud workflow běží, přidáme diagnostické informace
-        if result_data.get("status") == "RUNNING":
+        # Aktualizace statusu v databázi na základě Temporal výsledku
+        await update_workflow_status_in_database(workflow_id=workflow_id, run_id=run_id, result_data=result_data)
+        
+        # Přidáme diagnostické informace pro RUNNING i TIMED_OUT workflow  
+        if result_data.get("status") in ["RUNNING", "TIMED_OUT", "FAILED"]:
             try:
                 diagnostic_info = await describe_workflow_execution(workflow_id=workflow_id, run_id=run_id)
                 
@@ -278,7 +286,8 @@ async def get_workflow_result_endpoint(
                     "activity_elapsed_seconds": diagnostic_info.get("activity_elapsed_seconds", 0),
                     "activity_attempt": diagnostic_info.get("activity_attempt", 0),
                     "is_long_running": diagnostic_info.get("is_long_running", False),
-                    "warning": diagnostic_info.get("warning", False)
+                    "warning": diagnostic_info.get("warning", False),
+                    "workflow_history": diagnostic_info.get("workflow_history", [])  # 🔍 AUDIT: Historie aktivit
                 })
                 
                 logger.info(f"🎯 Current phase: {diagnostic_info.get('current_phase')} ({diagnostic_info.get('elapsed_seconds', 0)/60:.1f} min)")
@@ -384,6 +393,84 @@ async def terminate_workflow_endpoint(
                 "message": str(e)
             }
         )
+
+async def update_workflow_status_in_database(workflow_id: str, run_id: str, result_data: dict):
+    """
+    Aktualizuje status workflow v databázi na základě informací z Temporal serveru.
+    
+    Args:
+        workflow_id: ID workflow z Temporal
+        run_id: Run ID workflow z Temporal 
+        result_data: Výsledek z get_workflow_result
+    """
+    try:
+        from api.routes.workflow_run import get_prisma_client
+        from datetime import datetime
+        
+        logger.info(f"🔄 Aktualizuji status workflow v databázi: {workflow_id}")
+        
+        prisma = await get_prisma_client()
+        
+        # Najdeme workflow run podle workflowId a runId
+        existing_run = await prisma.workflowrun.find_unique(
+            where={
+                "workflowId_runId": {
+                    "workflowId": workflow_id,
+                    "runId": run_id
+                }
+            }
+        )
+        
+        if not existing_run:
+            logger.warning(f"⚠️ Workflow run {workflow_id}/{run_id} nenalezen v databázi pro aktualizaci")
+            return
+        
+        # Připravíme data pro aktualizaci
+        update_fields = {}
+        temporal_status = result_data.get("status")
+        
+        # Mapování Temporal statusů na naše databázové statusy
+        if temporal_status == "COMPLETED":
+            update_fields["status"] = "COMPLETED"
+            if result_data.get("end_time"):
+                update_fields["finishedAt"] = datetime.fromisoformat(result_data["end_time"].replace('Z', '+00:00'))
+        elif temporal_status == "FAILED":
+            update_fields["status"] = "FAILED"
+            if result_data.get("end_time"):
+                update_fields["finishedAt"] = datetime.fromisoformat(result_data["end_time"].replace('Z', '+00:00'))
+        elif temporal_status == "TIMED_OUT":
+            update_fields["status"] = "TIMED_OUT"
+            if result_data.get("end_time"):
+                update_fields["finishedAt"] = datetime.fromisoformat(result_data["end_time"].replace('Z', '+00:00'))
+        elif temporal_status == "RUNNING":
+            update_fields["status"] = "RUNNING"
+        else:
+            update_fields["status"] = temporal_status or "UNKNOWN"
+        
+        # Přidáme výsledek jako JSON pokud existuje
+        if result_data.get("result"):
+            import json
+            update_fields["resultJson"] = json.dumps(result_data["result"], ensure_ascii=False)
+        
+        # Přidáme stage informace pokud existují
+        if result_data.get("stage_logs"):
+            completed_stages = len([log for log in result_data["stage_logs"] if log.get("status") == "COMPLETED"])
+            total_stages = len(result_data["stage_logs"])
+            update_fields["stageCount"] = completed_stages
+            update_fields["totalStages"] = total_stages
+        
+        # Aktualizace v databázi
+        updated_run = await prisma.workflowrun.update(
+            where={"id": existing_run.id},
+            data=update_fields
+        )
+        
+        logger.info(f"✅ Workflow run aktualizován: {updated_run.status} ({updated_run.stageCount}/{updated_run.totalStages} stages)")
+        
+    except Exception as e:
+        logger.error(f"⚠️ Chyba při aktualizaci workflow statusu v databázi: {str(e)}")
+        # Nebudeme hadit exception, aby to nerozhodilo hlavní flow
+
 
 @app.get("/health")
 async def health_check():

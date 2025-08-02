@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 from typing import Optional, Tuple
 from temporalio.client import Client
 from dotenv import load_dotenv
@@ -97,15 +98,57 @@ async def start_seo_pipeline(topic: str, project_id: Optional[str] = None, csv_b
         safe_topic = topic.replace(' ', '_').replace('?', '').replace('!', '').lower()
         timestamp = int(__import__('time').time())
         
-        # Rozhodnutí o typu workflow na základě dostupnosti project_id
+        # Rozhodnutí o typu workflow na základě existence projektu a asistentů v DB  
         if project_id:
-            workflow_type = "AssistantPipelineWorkflow"
-            workflow_id = f"assistant_pipeline_{safe_topic}_{timestamp}"
-            logger.info("🤖 Používám AssistantPipelineWorkflow s asistenty z databáze")
+            # 🔍 STRICT PROJECT VALIDATION - ověření existence projektu v databázi
+            try:
+                import requests
+                
+                logger.info(f"🔍 Ověřuji projekt {project_id} (STRICT validation)")
+                
+                # Základní validace project_id
+                if not project_id or len(project_id.strip()) == 0:
+                    raise Exception("Project ID nesmí být prázdný")
+                
+                # 🚫 FAIL FAST - přímé ověření v databázi (bez circular dependency)
+                from api.database import get_prisma_client
+                
+                logger.info(f"📡 Validuji projekt přímo v databázi: {project_id}")
+                
+                # Přímé databázové ověření 
+                prisma = await get_prisma_client()
+                
+                # Kontrola existence projektu
+                project = await prisma.project.find_unique(where={"id": project_id})
+                if not project:
+                    error_msg = f"❌ Projekt {project_id} neexistuje v databázi"
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+                
+                # Kontrola asistentů
+                assistants = await prisma.assistant.find_many(
+                    where={"projectId": project_id, "active": True},
+                    order={"order": "asc"}
+                )
+                
+                if not assistants or len(assistants) == 0:
+                    error_msg = f"❌ Projekt {project.name} nemá žádné aktivní asistenty - vytvořte asistenty přes UI"
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+                
+                logger.info(f"✅ Projekt {project.name} ověřen - nalezeno {len(assistants)} aktivních asistentů")
+                
+                workflow_type = "AssistantPipelineWorkflow"
+                workflow_id = f"assistant_pipeline_{safe_topic}_{timestamp}"
+                logger.info(f"🤖 Používám AssistantPipelineWorkflow s asistenty z databáze (projekt {project_id})")
+                
+            except Exception as e:
+                logger.error(f"❌ Chyba při ověřování projektu {project_id}: {str(e)}")
+                raise Exception(f"Workflow nelze spustit: {str(e)}")
+                
         else:
-            workflow_type = "SEOWorkflow"
-            workflow_id = f"seo_pipeline_{safe_topic}_{timestamp}"
-            logger.info("⚙️ Používám fallback SEOWorkflow (bez project_id)")
+            # Žádný project_id - nelze spustit workflow bez konfigurace
+            raise Exception("Project ID je povinný - workflow nelze spustit bez specifikace projektu a asistentů")
         
         logger.info(f"🆔 Generuji workflow identifikátory:")
         logger.info(f"   📋 Původní topic: '{topic}'")
@@ -137,28 +180,23 @@ async def start_seo_pipeline(topic: str, project_id: Optional[str] = None, csv_b
         try:
             if project_id and workflow_type == "AssistantPipelineWorkflow":
                 # Nový AssistantPipelineWorkflow s project_id
-                logger.info(f"   📋 Arguments: topic='{topic}', project_id='{project_id}', csv_base64={bool(csv_base64)}")
+                current_date = __import__('datetime').datetime.now().strftime("%d. %m. %Y")
+                logger.info(f"   📋 Arguments: topic='{topic}', project_id='{project_id}', csv_base64={bool(csv_base64)}, date='{current_date}'")
                 
                 workflow_handle = await client.start_workflow(
                     "AssistantPipelineWorkflow",
-                    args=[topic, project_id, csv_base64],
+                    args=[topic, project_id, csv_base64, current_date],
                     id=workflow_id,
                     task_queue="default",
                     run_timeout=__import__('datetime').timedelta(minutes=run_timeout_minutes),
                     task_timeout=__import__('datetime').timedelta(minutes=task_timeout_minutes)
                 )
             else:
-                # Fallback na starý SEOWorkflow
-                logger.info(f"   📋 Arguments: topic='{topic}' (fallback)")
-                
-                workflow_handle = await client.start_workflow(
-                    "SEOWorkflow",
-                    topic,
-                    id=workflow_id,
-                    task_queue="default",
-                    run_timeout=__import__('datetime').timedelta(minutes=run_timeout_minutes),
-                    task_timeout=__import__('datetime').timedelta(minutes=task_timeout_minutes)
-                )
+                # KRITICKÁ CHYBA - tato větev by se nikdy neměla vykonat
+                # Pokud neexistuje project_id, funkce by měla vyhodit chybu výše
+                error_msg = f"Neplatný stav: workflow_type='{workflow_type}', project_id='{project_id}'"
+                logger.error(f"❌ {error_msg}")
+                raise Exception(f"Systémová chyba při spouštění workflow: {error_msg}")
             
             workflow_id = workflow_handle.id
             run_id = workflow_handle.result_run_id
@@ -456,12 +494,17 @@ async def describe_workflow_execution(workflow_id: str, run_id: str) -> dict:
         import datetime
         current_time = datetime.datetime.now(datetime.timezone.utc)
         if start_time:
+            # 🔧 FIX: Zajistíme kompatibilní timezone formát
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=datetime.timezone.utc)
             elapsed_seconds = (current_time - start_time).total_seconds()
         else:
             elapsed_seconds = 0
             
-        # Detekce long-running workflow (více než 15 minut)
-        is_long_running = elapsed_seconds > 900  # 15 minut
+        # 🚨 ENHANCED MONITORING - detekce problematických workflow
+        is_long_running = elapsed_seconds > 600   # 10 minut (zpřísněno z 15 min)
+        is_critical = elapsed_seconds > 1200      # 20 minut = kritický stav
+        is_stuck = elapsed_seconds > 1800        # 30 minut = zaseklé workflow
         
         result = {
             "workflow_id": workflow_id,
@@ -471,23 +514,154 @@ async def describe_workflow_execution(workflow_id: str, run_id: str) -> dict:
             "end_time": close_time.isoformat() if close_time else None,
             "elapsed_seconds": int(elapsed_seconds),
             "is_long_running": is_long_running,
+            "is_critical": is_critical,
+            "is_stuck": is_stuck,
             "warning": is_long_running if status == "RUNNING" else False
         }
         
-        # Pokud workflow běží, získáme informace o pending aktivitách
-        if status == "RUNNING":
+        # 🔍 DETAILNÍ AUDIT - získáme informace o aktivitách (RUNNING, TIMED_OUT, FAILED)
+        if status in ["RUNNING", "TIMED_OUT", "FAILED"]:
             try:
                 # Získání pending activity info
                 pending_activities = getattr(workflow_description, 'pending_activities', [])
                 
-                # Pokusíme se získat stage_logs i z běžícího workflow (pokud jsou dostupné)
-                stage_logs = []
+                # 🔍 ZÍSKÁNÍ WORKFLOW HISTORIE PRO AUDIT
+                workflow_history = []
                 try:
-                    # Pro běžící workflow můžeme zkusit získat mezivýsledky (obvykle nedostupné)
-                    logger.info("🔍 Pokouším se získat stage logs z běžícího workflow...")
-                    # Stage logs nejsou obvykle dostupné u RUNNING workflow, ale můžeme to zkusit
-                except Exception as logs_error:
-                    logger.debug(f"Stage logs nedostupné pro RUNNING workflow: {logs_error}")
+                    logger.info(f"🔍 Načítám historii workflow pro audit ({status})...")
+                    
+                    # Získání event history z workflow
+                    history = await workflow_handle.fetch_history()
+                    
+                    # Zkusíme různé způsoby přístupu k událostem
+                    events = []
+                    if hasattr(history, 'events'):
+                        events = history.events
+                    elif hasattr(history, '__iter__'):
+                        events = list(history)
+                    else:
+                        logger.warning(f"⚠️ History object type: {type(history)}, attrs: {dir(history)}")
+                        events = []
+                    
+                    logger.info(f"📋 Nalezeno {len(events)} událostí v historii")
+                    
+                    for event in events:
+                        try:
+                            event_type = getattr(event, 'event_type', 'Unknown')
+                            event_time = getattr(event, 'event_time', None)
+                            
+                            # Bezpečné formátování času
+                            time_str = None
+                            if event_time:
+                                try:
+                                    time_str = event_time.isoformat() if hasattr(event_time, 'isoformat') else str(event_time)
+                                except:
+                                    time_str = str(event_time)
+                            
+                            if hasattr(event, 'activity_task_scheduled_event_attributes'):
+                                attrs = event.activity_task_scheduled_event_attributes
+                                
+                                # Debug informace o attrs
+                                logger.debug(f"📋 DEBUG attrs: {dir(attrs) if attrs else 'None'}")
+                                
+                                activity_id = getattr(attrs, 'activity_id', 'Unknown')
+                                activity_type = getattr(attrs, 'activity_type', None)
+                                
+                                # Debug informace o activity_type
+                                if activity_type:
+                                    logger.debug(f"📋 DEBUG activity_type: type={type(activity_type)}, attrs={dir(activity_type)}")
+                                
+                                # Lepší extrakce názvu aktivity
+                                activity_name = 'Unknown'
+                                if activity_type:
+                                    if hasattr(activity_type, 'name'):
+                                        activity_name = activity_type.name
+                                    elif hasattr(activity_type, '__dict__'):
+                                        activity_name = str(activity_type.__dict__.get('name', activity_type))
+                                    else:
+                                        activity_name = str(activity_type)
+                                
+                                # Pokud stále nemáme název, zkusíme alternativní přístup  
+                                if activity_name in ['Unknown', '', None]:
+                                    for attr_name in ['type', 'name', 'activity_type_name']:
+                                        if hasattr(attrs, attr_name):
+                                            potential_name = getattr(attrs, attr_name)
+                                            if potential_name:
+                                                activity_name = str(potential_name)
+                                                break
+                                
+                                # Lepší formátování času pokud je v protobuf formátu
+                                formatted_time = time_str
+                                if hasattr(event_time, 'seconds') and hasattr(event_time, 'nanos'):
+                                    try:
+                                        import datetime
+                                        timestamp = event_time.seconds + event_time.nanos / 1_000_000_000
+                                        formatted_time = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).isoformat()
+                                    except:
+                                        formatted_time = f"seconds:{event_time.seconds}"
+                                
+                                workflow_history.append({
+                                    "event_type": "ActivityTaskScheduled",
+                                    "activity_name": activity_name,
+                                    "activity_id": activity_id,
+                                    "event_time": formatted_time,
+                                    "status": "SCHEDULED"
+                                })
+                            
+                            elif hasattr(event, 'activity_task_started_event_attributes'):
+                                workflow_history.append({
+                                    "event_type": "ActivityTaskStarted", 
+                                    "event_time": time_str,
+                                    "status": "STARTED"
+                                })
+                                
+                            elif hasattr(event, 'activity_task_completed_event_attributes'):
+                                attrs = event.activity_task_completed_event_attributes
+                                result = getattr(attrs, 'result', None)
+                                
+                                workflow_history.append({
+                                    "event_type": "ActivityTaskCompleted",
+                                    "event_time": time_str,
+                                    "status": "COMPLETED",
+                                    "result_size": len(str(result)) if result else 0
+                                })
+                                
+                            elif hasattr(event, 'activity_task_failed_event_attributes'):
+                                attrs = event.activity_task_failed_event_attributes
+                                failure = getattr(attrs, 'failure', None)
+                                failure_message = getattr(failure, 'message', 'Unknown') if failure else 'Unknown'
+                                
+                                workflow_history.append({
+                                    "event_type": "ActivityTaskFailed",
+                                    "event_time": time_str,
+                                    "status": "FAILED",
+                                    "error_message": failure_message
+                                })
+                                
+                            elif hasattr(event, 'activity_task_timed_out_event_attributes'):
+                                attrs = event.activity_task_timed_out_event_attributes
+                                timeout_type = getattr(attrs, 'timeout_type', 'Unknown')
+                                
+                                workflow_history.append({
+                                    "event_type": "ActivityTaskTimedOut",
+                                    "event_time": time_str,
+                                    "status": "TIMED_OUT",
+                                    "timeout_type": str(timeout_type) if timeout_type else 'Unknown'
+                                })
+                                
+                        except Exception as event_error:
+                            logger.warning(f"⚠️ Chyba při zpracování události: {event_error}")
+                            workflow_history.append({
+                                "event_type": "EventProcessingError",
+                                "error": str(event_error),
+                                "event_time": time_str
+                            })
+                    
+                    logger.info(f"✅ Načteno {len(workflow_history)} událostí z historie workflow")
+                    
+                except Exception as history_error:
+                    logger.warning(f"⚠️ Chyba při načítání workflow historie: {history_error}")
+                    workflow_history = [{"error": f"Failed to load history: {str(history_error)}"}]
                 
                 if pending_activities:
                     # Vezmeme první pending aktivitu (obvykle je jen jedna)
@@ -510,7 +684,11 @@ async def describe_workflow_execution(workflow_id: str, run_id: str) -> dict:
                     # Informace o aktivitě
                     activity_elapsed = 0
                     if hasattr(activity_info, 'scheduled_time') and activity_info.scheduled_time:
-                        activity_elapsed = (current_time - activity_info.scheduled_time).total_seconds()
+                        # 🔧 FIX: Zajistíme kompatibilní timezone formát
+                        scheduled_time = activity_info.scheduled_time
+                        if scheduled_time.tzinfo is None:
+                            scheduled_time = scheduled_time.replace(tzinfo=datetime.timezone.utc)
+                        activity_elapsed = (current_time - scheduled_time).total_seconds()
                     
                     result.update({
                         "current_activity_type": activity_name,
@@ -518,34 +696,50 @@ async def describe_workflow_execution(workflow_id: str, run_id: str) -> dict:
                         "activity_elapsed_seconds": int(activity_elapsed),
                         "activity_attempt": getattr(activity_info, 'attempt', 1),
                         "last_heartbeat_time": getattr(activity_info, 'last_heartbeat_time', None),
-                        "stage_logs": stage_logs  # Přidáme stage logs (obvykle prázdné pro RUNNING)
+                        "workflow_history": workflow_history  # 🔍 AUDIT: Historie všech aktivit
                     })
                     
                     logger.info(f"🎯 Aktuální fáze: {current_phase} ({activity_name})")
                     
                 else:
+                    # Pro TIMED_OUT/FAILED workflow často nejsou pending activities
+                    if status == "TIMED_OUT":
+                        current_phase = "TIMED_OUT - Analýza historie"
+                        logger.warning("⏰ TIMED_OUT workflow - analyzuji historii aktivit")
+                    elif status == "FAILED": 
+                        current_phase = "FAILED - Analýza chyb"
+                        logger.error("❌ FAILED workflow - analyzuji chyby")
+                    else:
+                        current_phase = "Workflow Logic"
+                        logger.info("🔄 Žádné pending aktivity - workflow logic")
+                    
                     result.update({
                         "current_activity_type": None,
-                        "current_phase": "Workflow Logic",
+                        "current_phase": current_phase,
                         "activity_elapsed_seconds": 0,
                         "activity_attempt": 0,
-                        "stage_logs": stage_logs
+                        "workflow_history": workflow_history  # 🔍 AUDIT: Historie i pro non-running workflow
                     })
-                    logger.info("🔄 Žádné pending aktivity - workflow logic")
                     
             except Exception as activity_error:
                 logger.warning(f"⚠️ Chyba při načítání activity info: {activity_error}")
                 result.update({
                     "current_activity_type": "Unknown", 
-                    "current_phase": "Unknown Phase",
+                    "current_phase": "Unknown Phase - Chyba načítání",
                     "activity_elapsed_seconds": 0,
                     "activity_attempt": 0,
                     "activity_error": str(activity_error),
-                    "stage_logs": []
+                    "workflow_history": []  # 🔍 AUDIT: Prázdná historie při chybě
                 })
         
-        if is_long_running and status == "RUNNING":
-            logger.warning(f"⚠️ Long-running workflow detected: {elapsed_seconds/60:.1f} minutes")
+        # 🚨 ENHANCED MONITORING ALERTS
+        if status == "RUNNING":
+            if is_stuck:
+                logger.error(f"🔥 ZASEKLÝ WORKFLOW: {workflow_id} běží {elapsed_seconds/60:.1f} minut - NUTNÉ UKONČIT!")
+            elif is_critical:
+                logger.warning(f"💥 KRITICKÝ WORKFLOW: {workflow_id} běží {elapsed_seconds/60:.1f} minut - zkontrolovat stav")
+            elif is_long_running:
+                logger.warning(f"⚠️ DLOUHODOBĚ BĚŽÍCÍ WORKFLOW: {workflow_id} běží {elapsed_seconds/60:.1f} minut")
             
         return result
         
@@ -610,7 +804,7 @@ async def terminate_workflow(workflow_id: str, run_id: str, reason: str = "Manua
             "workflow_id": workflow_id,
             "run_id": run_id,
             "reason": reason,
-            "terminated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "terminated_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
         }
         
     except Exception as e:

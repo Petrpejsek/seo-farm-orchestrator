@@ -62,7 +62,19 @@ class WorkflowRunListResponse(BaseModel):
 
 def calculate_elapsed_seconds(started_at: datetime, finished_at: Optional[datetime] = None) -> int:
     """Vypočítá uplynulé sekundy mezi startem a koncem (nebo aktuálním časem)"""
-    end_time = finished_at or datetime.now()
+    from datetime import timezone
+    
+    # Zajistíme timezone kompatibilitu
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+    
+    if finished_at:
+        if finished_at.tzinfo is None:
+            finished_at = finished_at.replace(tzinfo=timezone.utc)
+        end_time = finished_at
+    else:
+        end_time = datetime.now(timezone.utc)
+    
     return int((end_time - started_at).total_seconds())
 
 @router.post("/workflow-run", response_model=WorkflowRunResponse)

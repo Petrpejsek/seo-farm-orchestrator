@@ -6,6 +6,12 @@ api/routes/__init__.py
 api/routes/assistant.py
 api/routes/project.py
 api/routes/workflow_run.py
+llm_clients/__init__.py
+llm_clients/base.py
+llm_clients/claude_client.py
+llm_clients/factory.py
+llm_clients/gemini_client.py
+llm_clients/openai_client.py
 seo_farm_backend.egg-info/PKG-INFO
 seo_farm_backend.egg-info/SOURCES.txt
 seo_farm_backend.egg-info/dependency_links.txt

@@ -87,11 +87,21 @@ export default function WorkflowsPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string, startTime?: string) => {
     switch (status?.toUpperCase()) {
       case 'COMPLETED': return '✅';
       case 'FAILED': return '❌';
-      case 'RUNNING': return '🔄';
+      case 'RUNNING': 
+        // 🚨 HANGING DETECTION - pokud běží více než 15 minut, označit jako podezřelé
+        if (startTime) {
+          const startDate = new Date(startTime);
+          const now = new Date();
+          const diffMinutes = (now.getTime() - startDate.getTime()) / (1000 * 60);
+          if (diffMinutes > 15) {
+            return '⚠️'; // Podezřelé hanging
+          }
+        }
+        return '🔄';
       case 'CANCELLED': return '🚫';
       case 'TERMINATED': return '🛑';
       case 'TIMED_OUT': return '⏰';
@@ -109,6 +119,19 @@ export default function WorkflowsPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const getStatusText = (status: string, startTime?: string) => {
+    if (status?.toUpperCase() === 'RUNNING' && startTime) {
+      const startDate = new Date(startTime);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - startDate.getTime()) / (1000 * 60);
+      if (diffMinutes > 15) {
+        return `${status} (⚠️ Běží ${Math.round(diffMinutes)} min - možné zaseknutí)`;
+      }
+      return `${status} (${Math.round(diffMinutes)} min)`;
+    }
+    return status;
   }
 
   const truncateHash = (hash: string) => hash.substring(0, 8)
@@ -154,8 +177,8 @@ export default function WorkflowsPage() {
               workflows.map((workflow) => (
                 <tr key={`${workflow.workflow_id}-${workflow.run_id}`} className="hover:bg-gray-50">
                   <td className="px-4 py-2 border-b">
-                    <span title={workflow.status}>
-                      {getStatusIcon(workflow.status)}
+                    <span title={getStatusText(workflow.status, workflow.startedAt || workflow.createdAt)}>
+                      {getStatusIcon(workflow.status, workflow.startedAt || workflow.createdAt)}
                     </span>
                   </td>
                   <td className="px-4 py-2 border-b">

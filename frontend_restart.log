@@ -1,0 +1,54 @@
+
+> seo-farm-frontend@0.1.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3001
+   - Environments: .env.local
+
+ ✓ Ready in 3.7s
+ ○ Compiling /page ...
+ ✓ Compiled /page in 2.2s (470 modules)
+ ✓ Compiled in 516ms (246 modules)
+ ✓ Compiled /workflows/page in 316ms (462 modules)
+ ✓ Compiled /workflows/[workflow_id]/[run_id]/page in 205ms (470 modules)
+ ✓ Compiled /(dashboard)/projects/page in 254ms (476 modules)
+ ✓ Compiled /(dashboard)/projects/[project_id]/page in 370ms (482 modules)
+ ✓ Compiled in 2.2s (492 modules)
+ ✓ Compiled in 749ms (492 modules)
+ ✓ Compiled in 765ms (492 modules)
+ ✓ Compiled in 905ms (492 modules)
+ ✓ Compiled in 448ms (492 modules)
+ ✓ Compiled in 965ms (492 modules)
+ ✓ Compiled in 855ms (492 modules)
+ ✓ Compiled in 658ms (492 modules)
+ ✓ Compiled in 500ms (492 modules)
+ ✓ Compiled in 602ms (492 modules)
+ ✓ Compiled in 670ms (492 modules)
+ ✓ Compiled in 828ms (492 modules)
+ ✓ Compiled /(dashboard)/projects/page in 178ms (241 modules)
+ ✓ Compiled in 981ms (492 modules)
+ ✓ Compiled in 903ms (492 modules)
+ ✓ Compiled in 799ms (492 modules)
+ ✓ Compiled in 503ms (492 modules)
+ ✓ Compiled in 978ms (492 modules)
+ ✓ Compiled in 679ms (492 modules)
+ ✓ Compiled in 454ms (492 modules)
+ ✓ Compiled in 940ms (492 modules)
+ ✓ Compiled in 722ms (492 modules)
+ ✓ Compiled in 492ms (492 modules)
+ ✓ Compiled in 824ms (492 modules)
+ ✓ Compiled in 819ms (492 modules)
+ ✓ Compiled in 555ms (492 modules)
+ ✓ Compiled in 700ms (492 modules)
+ ✓ Compiled in 634ms (492 modules)
+ ✓ Compiled in 806ms (492 modules)
+ ✓ Compiled in 820ms (492 modules)
+ ✓ Compiled in 757ms (492 modules)
+ ✓ Compiled in 445ms (492 modules)
+ ✓ Compiled in 723ms (492 modules)
+ ✓ Compiled /(dashboard)/projects/page in 219ms (241 modules)
+ ✓ Compiled in 976ms (496 modules)
+ ✓ Compiled in 935ms (496 modules)
+ ✓ Compiled in 1031ms (496 modules)
+ ✓ Compiled in 888ms (496 modules)

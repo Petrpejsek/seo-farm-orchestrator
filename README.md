@@ -1,179 +1,318 @@
-# SEO Farm Orchestrator
+# 🏭 SEO ORCHESTRATOR - Produkční LLM Workflow System
 
-🎯 **AI-powered SEO content orchestrace pomocí Temporal.io + OpenAI Assistant API**
+Stabilní orchestrátor pro automatizovanou tvorbu SEO článků postavený na **Temporal.io** s podporou multiple LLM providerů (OpenAI, Claude, Gemini).
 
-## ✨ Nové funkcie
+## 🚀 RYCHLÉ SPUŠTĚNÍ
 
-### 1️⃣ **Bulk Processing z CSV súborov**
+### Prerekvizity
 ```bash
-# Spracuje všetky témy z CSV súboru
-python scripts/test_cli.py --csv input/topics.csv
-```
+# Python 3.8+
+python --version
 
-### 2️⃣ **Export do PostgreSQL databázy**
-```bash
-# Nastavenie v .env súbore
-SAVE_TO_DB=true
-DATABASE_URL=postgresql://user:password@localhost:5432/seo_farm
+# Aktivace virtuálního prostředí
+source venv/bin/activate
 
-# Automaticky sa vytvorí tabuľka seo_outputs s kompletným obsahom
-```
-
-### 3️⃣ **CLI nástroj pre produkčné použitie**
-```bash
-# Inštalácia balíčka
-pip install -e .
-
-# Použitie
-python scripts/test_cli.py pipeline "Téma"
-python scripts/test_cli.py --csv input/topics.csv
-```
-
-## 🚀 Rýchly štart
-
-### 1. Inštalácia
-```bash
-git clone <your-repo>
-cd seo-farm-orchestrator
-
-# Python 3.11 virtual environment
-python3.11 -m venv .venv
-source .venv/bin/activate
-
+# Instalace závislostí
 pip install -r requirements.txt
 ```
 
-### 2. Konfigurácia (.env súbor)
+### Spuštění systému
+```bash
+# 1. Spuštění Temporal serveru
+temporal server start-dev &
+
+# 2. Spuštění backend API
+cd backend && uvicorn main:app --port 8000 &
+
+# 3. Spuštění produkčního workera
+export API_BASE_URL=http://localhost:8000
+python worker.py
+```
+
+### Monitoring
+```bash
+# Sledování logů workera
+tail -f worker_production.log
+
+# Temporal UI
+open http://localhost:8233
+
+# Backend API
+curl http://localhost:8000/health
+```
+
+## 🏗️ ARCHITEKTURA SYSTÉMU
+
+### 📁 Struktura projektu
+```
+🏭 PRODUKČNÍ ARCHITEKTURA:
+├── 🚀 worker.py                     # Hlavní entrypoint workera
+├── 🏭 production_worker.py          # Produkční worker logika
+├── 🔧 config.py                     # Centralizovaná konfigurace
+├── 📝 logger.py                     # Strukturované logování
+├── 🛡️ activity_wrappers.py          # Bezpečné wrappery pro aktivity
+├── 📋 requirements.txt              # Python závislosti
+├── 📚 PRODUCTION_README.md          # Detailní deployment guide
+├── 🧪 test_production_worker.py     # Test suite
+├── 📁 activities/
+│   ├── 🛡️ safe_assistant_activities.py  # Bezpečné LLM aktivity
+│   └── 📄 [originální aktivity...]
+├── 📁 workflows/
+│   ├── 🔄 assistant_pipeline_workflow.py
+│   └── 📄 [ostatní workflows...]
+├── 📁 backend/
+│   ├── 🌐 main.py                   # FastAPI aplikace
+│   ├── 🔗 temporal_client.py        # Temporal klient
+│   ├── 📁 llm_clients/              # LLM provideri
+│   └── 📁 api/                      # REST API endpoints
+└── 📁 web-frontend/                 # React.js frontend
+```
+
+### 🔄 Workflow Pipeline
+```
+1. 📥 AssistantPipelineWorkflow REQUEST
+   ↓
+2. 🔄 load_assistants_from_database
+   ↓
+3. 🔁 FOR EACH ASSISTANT:
+   ├── 🛡️ Safe wrapper aktivace (@safe_activity)
+   ├── ⚡ Heartbeat před LLM voláním
+   ├── 🤖 LLM API call (OpenAI/Claude/Gemini)
+   ├── 🔄 Retry logic (3x exponential backoff)
+   ├── 📊 Output standardization & validation
+   └── 📝 Structured logging
+   ↓
+4. ✅ WORKFLOW COMPLETION
+```
+
+## 🛡️ BEZPEČNOSTNÍ FUNKCE
+
+### ✅ Implementované bezpečnostní funkce:
+- **🛡️ Crash Protection** - Každá aktivita má `@safe_activity` wrapper
+- **📊 Structured Logging** - Všechny chyby s traceback do `worker_production.log`
+- **⚡ Graceful Shutdown** - SIGINT/SIGTERM handling s cleanup
+- **🔄 Retry Logic** - LLM volání s exponential backoff (3x)
+- **⚙️ Centralized Config** - Vše v `config.py` a environment variables
+- **⚡ Heartbeat Protection** - Prevence timeouts během LLM volání
+- **🧪 Input Validation** - Validace všech vstupních parametrů
+
+### 📊 Monitoring features:
+```python
+✅ Health check endpoints
+✅ Structured logs pro alerting  
+✅ Error rate tracking
+✅ Duration monitoring
+✅ LLM API response tracking
+✅ Activity success/failure metrics
+```
+
+## ⚙️ KONFIGURACE
+
+### Environment Variables
+```bash
+# Povinné
+export API_BASE_URL=http://localhost:8000
+
+# Volitelné
+export TEMPORAL_HOST=localhost:7233
+export TEMPORAL_NAMESPACE=default
+export LOG_LEVEL=INFO
+```
+
+### config.py nastavení
+```python
+# Timeouty
+default_timeout = 600s         # 10 minut na aktivitu
+heartbeat_timeout = 180s       # 3 minuty heartbeat
+
+# LLM konfigurace
+default_temperature = 0.7
+default_max_tokens = None      # Neomezeno
+
+# Retry policy
+retry_attempts = 3
+retry_backoff = 2.0           # Exponential backoff
+```
+
+## 🧪 TESTOVÁNÍ
+
+### Unit testy
+```bash
+# Test všech modulů
+python test_production_worker.py
+
+# Pytest (pokud je nainstalován)
+pytest tests/ -v
+```
+
+### Funkční test pipeline
+```bash
+# 1. Spusť worker
+python worker.py
+
+# 2. Spusť workflow přes Temporal UI
+# http://localhost:8233
+# Workflow: AssistantPipelineWorkflow
+# Args: ["test topic", "project_id", "", "2025-01-31"]
+```
+
+## 🚀 PRODUKČNÍ DEPLOYMENT
+
+### Option 1: Systemd Service
 ```ini
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
-OPENAI_ASSISTANT_ID=asst_xxxxxxxxxxxxxxxxxx
+# /etc/systemd/system/seo-worker.service
+[Unit]
+Description=SEO Orchestrator Worker
+After=network.target
 
-# Voliteľné - databázový export
-SAVE_TO_DB=false
-DATABASE_URL=postgresql://user:password@localhost:5432/seo_farm
+[Service]
+Type=simple
+User=seo-user
+WorkingDirectory=/opt/seo-orchestrator
+Environment=API_BASE_URL=https://api.yourdomain.com
+Environment=TEMPORAL_HOST=temporal.yourdomain.com:7233
+Environment=LOG_LEVEL=INFO
+ExecStart=/opt/seo-orchestrator/venv/bin/python worker.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-### 3. Spustenie Temporal serveru (Docker)
 ```bash
-docker-compose up -d
+# Aktivace
+sudo systemctl enable seo-worker
+sudo systemctl start seo-worker
+sudo systemctl status seo-worker
 ```
 
-### 4. Spustenie workera
+### Option 2: Docker
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV API_BASE_URL=http://backend:8000
+ENV TEMPORAL_HOST=temporal:7233
+
+CMD ["python", "worker.py"]
+```
+
 ```bash
-source .venv/bin/activate
-PYTHONPATH=$(pwd) python3 worker.py
+# Build & Run
+docker build -t seo-orchestrator .
+docker run -e API_BASE_URL=http://backend:8000 seo-orchestrator
 ```
 
-### 5. Testovanie
-
-#### Jednotlivé téma:
+### Option 3: PM2 (Pro development)
 ```bash
-python scripts/test_cli.py pipeline "AI nástroje pre content marketing"
+# Instalace PM2
+npm install -g pm2
+
+# Spuštění
+pm2 start worker.py --name seo-worker --interpreter python
+
+# Monitoring
+pm2 status
+pm2 logs seo-worker
 ```
 
-#### Bulk processing z CSV:
+## 📊 MONITORING & ALERTING
+
+### Log monitoring
 ```bash
-# Vytvor CSV súbor s témami
-echo "AI nástroje pre marketing
-Moderní SEO strategie 2025
-Automatizace social media" > input/topics.csv
+# Sledování chyb
+tail -f worker_production.log | grep "ERROR\|CRITICAL"
 
-# Spusti bulk processing
-python scripts/test_cli.py --csv input/topics.csv
+# Metriky
+grep "ACTIVITY SUCCESS\|ACTIVITY ERROR" worker_production.log | wc -l
 ```
 
-## 📊 Výstup
-
-### JSON súbory
+### Doporučené alerting pravidla
 ```
-outputs/seo_output_20250728_123456_cli_AI_n.json
-```
-
-### PostgreSQL tabuľka (voliteľné)
-```sql
-CREATE TABLE seo_outputs (
-    id SERIAL PRIMARY KEY,
-    topic VARCHAR(500),
-    generated TEXT,
-    structured TEXT,
-    enriched TEXT,
-    faq_final TEXT,
-    workflow_id VARCHAR(100),
-    created_at TIMESTAMP DEFAULT NOW()
-);
+🚨 Worker down > 1 min
+🚨 Error rate > 10% za 5 min
+🚨 LLM timeout > 50% za 10 min  
+⚠️ Workflow duration > 20 min
+⚠️ Queue depth > 10 items
 ```
 
-## 🔄 Temporal Workflow (5 kroků)
+## 🔧 TROUBLESHOOTING
 
-1. **generate_llm_friendly_content** - OpenAI Assistant API
-2. **inject_structured_markup** - JSON-LD schema
-3. **enrich_with_entities** - Entity linking
-4. **add_conversational_faq** - FAQ sekcia
-5. **save_output** - JSON súbor + voliteľne PostgreSQL
+### Běžné problémy
 
-## 🛠️ Vývoj
-
-### CLI testovanie bez Temporal
+#### Worker se nespustí
 ```bash
-python scripts/test_cli.py pipeline "Test téma"
+# Zkontroluj prerekvizity
+python worker.py  # Má vestavěnou diagnostiku
+
+# Ruční kontrola
+curl http://localhost:8233          # Temporal server
+curl http://localhost:8000/health   # Backend API
+echo $API_BASE_URL                  # Environment
 ```
 
-### Temporal workflow
+#### Pipeline selhává
 ```bash
-temporal workflow start --type SEOWorkflow --task-queue default --input '"Test téma"'
+# Logy s detaily
+grep "ACTIVITY ERROR" worker_production.log
+
+# Temporal UI debugging
+open http://localhost:8233
+
+# LLM API klíče
+curl http://localhost:8000/api-keys/openai
 ```
 
-### Logs a monitoring
-- Temporal UI: http://localhost:8081
-- Worker logs: `tail -f worker.log`
-- JSON výstupy: `ls outputs/`
-
-## 📦 Dependencies
-
-### Core
-- `temporalio==1.4.0` - Workflow orchestrace
-- `openai==1.58.1` - OpenAI Assistant API
-- `python-dotenv==1.0.0` - Environment konfigurácia
-
-### Voliteľné
-- `sqlalchemy>=2.0.23` - PostgreSQL export
-- `psycopg2-binary>=2.9.9` - PostgreSQL driver
-
-## 🐛 Troubleshooting
-
-### Python 3.13 problémy
+#### Performance problémy
 ```bash
-# Použij Python 3.11
-brew install python@3.11
-python3.11 -m venv .venv
+# Analýza duration
+grep "Duration:" worker_production.log | sort -n
+
+# LLM response times
+grep "LLM RESPONSE:" worker_production.log
 ```
 
-### Temporal sandbox chyby
-```bash
-# Uisti sa, že používaš Python 3.11
-python3 --version
-# Python 3.11.13
+## 🤝 DEVELOPMENT
+
+### Přidání nové aktivity
+```python
+# activities/my_new_activity.py
+from activity_wrappers import safe_activity
+
+@safe_activity(name="my_new_activity", timeout_seconds=300)
+async def my_new_activity(input_data: dict) -> dict:
+    # Tvoje logika zde
+    return {"status": "completed", "output": "result"}
 ```
 
-### Import chyby
-```bash
-# Nastav PYTHONPATH
-export PYTHONPATH=$(pwd)
-python3 worker.py
+### Přidání nového LLM providera
+```python
+# backend/llm_clients/my_provider_client.py
+from .base import BaseLLMClient
+
+class MyProviderClient(BaseLLMClient):
+    async def chat_completion(self, **kwargs):
+        # Implementation
+        pass
 ```
 
-## 📈 Produkčné nasadenie
+## 📚 DOKUMENTACE
 
-1. **Docker setup** s PostgreSQL
-2. **Environment variables** v produkčnom prostredí
-3. **Temporal cluster** konfigurácia
-4. **Rate limiting** pre OpenAI API
-5. **Monitoring** Temporal workflows
+- **📋 PRODUCTION_README.md** - Detailní deployment guide
+- **📄 REFACTOR_COMPLETE.md** - Historie refaktoringu
+- **🧪 test_production_worker.py** - Příklady testování
 
-## 🔗 API Integration
+## 📞 SUPPORT
 
-- **OpenAI Assistant API** - Pokročilé content generation
-- **Temporal.io** - Reliable workflow orchestrace  
-- **PostgreSQL** - Persistent data storage
-- **JSON-LD Schema** - Structured markup
-- **CSV Import** - Bulk topic processing 
+**Issues & Chyby:**
+1. Zkontroluj `worker_production.log` pro detaily
+2. Temporal UI (http://localhost:8233) pro workflow debugging
+3. Backend health (http://localhost:8000/health)
+
+**🏆 SYSTÉM JE PLNĚ PŘIPRAVEN PRO PRODUKČNÍ NASAZENÍ!**

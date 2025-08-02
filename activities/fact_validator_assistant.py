@@ -161,7 +161,7 @@ Vrať strukturovaný JSON s těmito sekcemi a overall confidence score (0-100%).
             else:
                 parsed_data = json.loads(validation_result)
             
-            return {
+            result_data = {
                 "validation_results": parsed_data,
                 "raw_response": validation_result,
                 "input_data": input_data,
@@ -171,83 +171,17 @@ Vrať strukturovaný JSON s těmito sekcemi a overall confidence score (0-100%).
                 "model_used": params["model"],
                 "timestamp": datetime.now().isoformat()
             }
+            return {"output": json.dumps(result_data, ensure_ascii=False)}
             
-        except json.JSONDecodeError:
-            logger.warning("⚠️ Nelze parsovat JSON z OpenAI odpovědi, vrátím strukturovaný fallback")
-            return {
-                "validation_results": {
-                    "factual_accuracy": {"score": 85, "issues": ["Potřebuje ruční kontrolu"]},
-                    "source_verification": {"score": 80, "notes": validation_result[:300] + "..."},
-                    "logical_consistency": {"score": 90, "status": "Good"},
-                    "completeness_check": {"score": 75, "missing_areas": ["Detailní analýza"]},
-                    "corrections": {"priority": "medium", "items": ["Ověř všechny číselné údaje"]},
-                    "overall_confidence": 80
-                },
-                "raw_response": validation_result,
-                "input_data": input_data,
-                "validation_status": "partial",
-                "assistant": "FactValidatorAssistant",
-                "assistant_id": assistant_id,
-                "model_used": params["model"],
-                "timestamp": datetime.now().isoformat()
-            }
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ FactValidator JSON parsing selhalo: {e}")
+            raise Exception(f"FactValidatorAssistant nelze parsovat JSON response: {e}")
             
     except Exception as e:
-        logger.error(f"❌ Chyba při volání OpenAI API: {e}")
-        
-        # Fallback validation
-        return await _fallback_validation(input_data, assistant_id)
+        logger.error(f"❌ Fact validation selhala: {e}")
+        raise Exception(f"FactValidatorAssistant selhal: {e}")
 
-async def _fallback_validation(input_data: Dict[str, Any], assistant_id: Optional[str] = None) -> Dict[str, Any]:
-    """Fallback validation když OpenAI API není dostupné"""
-    logger.info(f"🔄 Používám fallback validation")
-    
-    # Základní validace bez AI
-    content_length = len(str(input_data))
-    has_numbers = any(char.isdigit() for char in str(input_data))
-    
-    confidence_score = 70  # Konzervativní odhad
-    if content_length > 1000:
-        confidence_score += 10
-    if has_numbers:
-        confidence_score += 5
-    
-    return {
-        "validation_results": {
-            "factual_accuracy": {
-                "score": confidence_score,
-                "status": "Requires manual review",
-                "note": "Automatická validace není dostupná"
-            },
-            "source_verification": {
-                "score": 70,
-                "recommendation": "Ověř všechny zdroje manuálně"
-            },
-            "logical_consistency": {
-                "score": 80,
-                "status": "Structure appears coherent"
-            },
-            "completeness_check": {
-                "score": 75,
-                "content_length": content_length,
-                "assessment": "Standard length content"
-            },
-            "corrections": {
-                "priority": "high",
-                "items": [
-                    "Proveď manuální fact-check všech tvrzení",
-                    "Ověř aktuálnost všech statistik",
-                    "Zkontroluj validitu zdrojů"
-                ]
-            },
-            "overall_confidence": confidence_score
-        },
-        "input_data": input_data,
-        "validation_status": "fallback",
-        "assistant": "FactValidatorAssistant",
-        "assistant_id": assistant_id,
-        "timestamp": datetime.now().isoformat()
-    }
+
 
 # Synchronní wrapper pro zpětnou kompatibilitu
 def fact_validator_assistant_sync(input_data: Dict[str, Any], assistant_id: Optional[str] = None) -> Dict[str, Any]:

@@ -25,13 +25,16 @@ export default function Home() {
       console.log('🔍 DEBUG: Načítám data z API...');
       console.log('🔗 API BASE URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
       
-      const projectsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects`);
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      console.log('🔗 API BASE URL:', apiBaseUrl);
+      
+      const projectsResponse = await fetch(`${apiBaseUrl}/api/projects`);
       const projectsData = await projectsResponse.json();
       console.log('📁 DEBUG: Projects data:', projectsData);
       setProjects(projectsData);
       
       // Načtení skutečných workflow z API
-      const workflowsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/workflows?limit=50`);
+      const workflowsResponse = await fetch(`${apiBaseUrl}/api/workflows?limit=50`);
       const workflowsData = await workflowsResponse.json();
       console.log('⚙️ DEBUG: Workflows response:', workflowsData);
       console.log('📋 DEBUG: Workflows array:', workflowsData.workflows);
@@ -104,13 +107,15 @@ export default function Home() {
         ...(csvData && { csv: csvData })
       }
 
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      
       console.log('🚀 Odesílám požadavek:', {
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pipeline-run`,
+        url: `${apiBaseUrl}/api/pipeline-run`,
         method: 'POST',
         data: requestData
       })
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pipeline-run`, {
+      const response = await fetch(`${apiBaseUrl}/api/pipeline-run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

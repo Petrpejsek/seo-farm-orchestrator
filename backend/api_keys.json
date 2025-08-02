@@ -4,5 +4,17 @@
     "masked_key": "sk-p********************...9rIA",
     "created_at": "2025-07-29T23:22:49.404568",
     "updated_at": "2025-07-29T23:22:49.404568"
+  },
+  "claude": {
+    "encrypted_key": "Z0FBQUFBQm9pbl9BVktnSFJjanhWb20zdVBlOVZrN2YxbkhhcGRwSDA0SlhuZXBvM2RhUmdBREhjTE91a3l4NnlLeFpWV2lhRDllTE8wbnN0MUUtOWdjWjlhaUw3YkgwS2YxOFZzbTl0OFhtSXJlV1RfTTFjeng0am44dFgteVNLQVBHeE5obGtfcmVkTTM5bUFHRDlKQThLRjBZM1pud2ZTWnVFXy05NXpadDdhNFVmTXFpaW4zNmdZeTlPN19PeUpmT3JYb3JTOUpWVmRDYkFVM1hOQVA2WUp2U3VfTHVwdz09",
+    "masked_key": "sk-a********************...SAAA",
+    "created_at": "2025-07-30T22:25:36.267526",
+    "updated_at": "2025-07-30T22:25:36.267526"
+  },
+  "gemini": {
+    "encrypted_key": "Z0FBQUFBQm9peUx4WTlSZWt3WmlZYklodm9Hb3Z0bDNVQ0NDbFpVcXNiNDNkNkdTZHJMTHZrYUhteUhXU29uSVZvakhCamxPaVhzSF9lc3hoTzNtWkduOXp6a09WUFRVS2FBeC1RM1BXNzYtMnRSMzBDMklwQTJVb1RkYWgwZUFDTDVxalN6RFhTcWE=",
+    "masked_key": "AIza*******************************fVc4",
+    "created_at": "2025-07-31T10:01:53.523336",
+    "updated_at": "2025-07-31T10:01:53.523336"
   }
 }

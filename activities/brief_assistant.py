@@ -24,7 +24,13 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Inicializace OpenAI klienta
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+try:
+    from utils.api_keys import get_api_key
+    client = OpenAI(api_key=get_api_key("openai"))
+except Exception as e:
+    logger.error(f"❌ Nelze inicializovat OpenAI client: {e}")
+    # Fallback na environment variable
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 async def brief_assistant(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -117,18 +123,22 @@ Vrať JSON odpověď v tomto formátu:
         openai_content = response.choices[0].message.content
         parsed_response = json.loads(openai_content)
         
-        # Finální struktura odpovědi
+        # Finální struktura odpovědi s REQUIRED 'output' klíčem pro workflow
+        brief_content = parsed_response.get("brief", f"SEO průvodce: {topic}")
+        metadata = parsed_response.get("metadata", {
+            "type": "SEO",
+            "intent": "informative",
+            "audience": "general",
+            "keyword_focus": topic.lower(),
+            "content_type": "guide",
+            "estimated_length": "2000-3000 words",
+            "difficulty": "medium"
+        })
+        
         result = {
-            "brief": parsed_response.get("brief", f"SEO průvodce: {topic}"),
-            "metadata": parsed_response.get("metadata", {
-                "type": "SEO",
-                "intent": "informative",
-                "audience": "general",
-                "keyword_focus": topic.lower(),
-                "content_type": "guide",
-                "estimated_length": "2000-3000 words",
-                "difficulty": "medium"
-            }),
+            "output": brief_content,  # 🚨 REQUIRED klíč pro workflow
+            "brief": brief_content,
+            "metadata": metadata,
             "original_topic": topic,
             "transformation_status": "success",
             "assistant": "BriefAssistant",
@@ -189,6 +199,7 @@ async def brief_assistant_fallback(topic: str, assistant_id: Optional[str] = Non
         }
     
     return {
+        "output": brief,  # 🚨 REQUIRED klíč pro workflow
         "brief": brief,
         "metadata": metadata,
         "original_topic": topic,

@@ -10,6 +10,8 @@ interface StageLog {
   timestamp: number;
   duration?: number;
   error?: string;
+  output?: any;  // Přidáno pro podporu výstupu z asistentů
+  metadata?: any;  // Přidáno pro dodatečná metadata
 }
 
 interface WorkflowResult {
@@ -228,21 +230,114 @@ export default function WorkflowRunDetailPage() {
     });
   };
 
-  // Helper funkce pro mapování stage names na pipeline ikony
+  // Helper funkce pro detekci a parsování image výstupů
+  const parseImageOutput = (output: any): { images: any[], hasImages: boolean } => {
+    if (!output) return { images: [], hasImages: false };
+    
+    try {
+      let parsedOutput = output;
+      
+      // Pokud je output string, zkus ho parsovat jako JSON
+      if (typeof output === 'string') {
+        parsedOutput = JSON.parse(output);
+      }
+      
+      // Zkontroluj různé možné struktury image dat
+      if (parsedOutput.generated_images || parsedOutput.image_urls) {
+        return {
+          images: parsedOutput.generated_images || parsedOutput.image_urls,
+          hasImages: true
+        };
+      }
+      
+      if (Array.isArray(parsedOutput) && parsedOutput.length > 0 && parsedOutput[0].url) {
+        return {
+          images: parsedOutput,
+          hasImages: true
+        };
+      }
+      
+    } catch (e) {
+      // Pokud parsování selže, return false
+    }
+    
+    return { images: [], hasImages: false };
+  };
+
+  // Komponenta pro zobrazení galerie obrázků
+  const ImageGallery = ({ images, title = "Vygenerované obrázky" }: { images: any[], title?: string }) => {
+    if (!images || images.length === 0) return null;
+    
+    return (
+      <div className="mt-4">
+        <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          🎨 {title}
+        </h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {images.map((image, index) => (
+            <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+              {image.url && (
+                <div className="mb-2">
+                  <img 
+                    src={image.url} 
+                    alt={image.alt_text || `AI generated content ${index + 1}`}
+                    className="w-full h-48 object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (nextElement) {
+                        nextElement.style.display = 'block';
+                      }
+                    }}
+                  />
+                  <div className="text-center text-gray-500 text-sm p-4 hidden">
+                    🖼️ Obrázek se nepodařilo načíst
+                  </div>
+                </div>
+              )}
+              {image.revised_prompt && (
+                <p className="text-xs text-gray-600 mb-1">
+                  <strong>Prompt:</strong> {image.revised_prompt}
+                </p>
+              )}
+              {(image.description || image.alt_text) && (
+                <p className="text-xs text-gray-700">
+                  <strong>Popis:</strong> {image.description || image.alt_text}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper funkce pro mapování stage names na pipeline ikony (10 asistentů)
   const getPipelineStageIcon = (stageName: string): string => {
     const stageMap: { [key: string]: string } = {
+      'BriefAssistant': '📝',
       'brief_assistant': '📝',
-      'generate_llm_friendly_content': '✍️',
-      'inject_structured_markup': '🏗️',
-      'enrich_with_entities': '🔍',
-      'add_conversational_faq': '❓',
-      'save_output_to_json': '💾',
-      'content_humanizer': '👤',
-      'keyword_generator': '🔑',
-      'seo': '📈',
-      'multimedia': '🎨',
-      'qa': '✅',
-      'publish': '🚀'
+      'ResearchAssistant': '🔍',
+      'research_assistant': '🔍',
+      'FactValidatorAssistant': '✅',
+      'fact_validator_assistant': '✅',
+      'DraftAssistant': '✍️',
+      'draft_assistant': '✍️',
+      'HumanizerAssistant': '👤',
+      'humanizer_assistant': '👤',
+      'SEOAssistant': '📈',
+      'seo_assistant': '📈',
+      'MultimediaAssistant': '🎬',
+      'multimedia_assistant': '🎬',
+      'QAAssistant': '🔍',
+      'qa_assistant': '🔍',
+      'ImageRendererAssistant': '🎨',
+      'image_renderer_assistant': '🎨',
+      'PublishAssistant': '🚀',
+      'publish_assistant': '🚀',
+      // Legacy mapování
+      'load_assistants_config': '⚙️',
+      'save_pipeline_result': '💾'
     };
     
     // Zkusím najít přesný match, pak částečný match
@@ -257,11 +352,34 @@ export default function WorkflowRunDetailPage() {
     return '⚙️'; // default icon
   };
 
-  // Helper funkce pro mapování stage names na output data
+  // Helper funkce pro mapování stage names na output data (10 asistentů)
   const getStageOutputData = (stageName: string, result: any): { input: any; output: any } => {
     if (!result) return { input: null, output: null };
     
+    // Speciální handling pro stage logs z workflow
+    if (result.stage_logs) {
+      const stageLog = result.stage_logs.find((log: any) => log.stage === stageName);
+      if (stageLog && stageLog.output) {
+        return {
+          input: result.topic || null,
+          output: stageLog.output
+        };
+      }
+    }
+    
+    // Klasické mapování pro legacy podporu
     const stageDataMap: { [key: string]: { inputKey?: string; outputKey: string } } = {
+      'BriefAssistant': { outputKey: 'brief_output' },
+      'ResearchAssistant': { outputKey: 'research_output' },
+      'FactValidatorAssistant': { outputKey: 'validation_output' },
+      'DraftAssistant': { outputKey: 'draft_output' },
+      'HumanizerAssistant': { outputKey: 'humanized_output' },
+      'SEOAssistant': { outputKey: 'seo_output' },
+      'MultimediaAssistant': { outputKey: 'multimedia_output' },
+      'QAAssistant': { outputKey: 'qa_output' },
+      'ImageRendererAssistant': { outputKey: 'image_output' },
+      'PublishAssistant': { outputKey: 'final_output' },
+      // Legacy mapování
       'generate_llm_friendly_content': { outputKey: 'generated' },
       'inject_structured_markup': { inputKey: 'generated', outputKey: 'structured' },
       'enrich_with_entities': { inputKey: 'structured', outputKey: 'enriched' },
@@ -564,11 +682,23 @@ export default function WorkflowRunDetailPage() {
                       </h4>
                       <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
                         {selectedStageModal.output ? (
-                          <pre className="text-sm whitespace-pre-wrap break-words">
-                            {typeof selectedStageModal.output === 'string' 
-                              ? selectedStageModal.output 
-                              : JSON.stringify(selectedStageModal.output, null, 2)}
-                          </pre>
+                          <>
+                            {/* Speciální zobrazení pro ImageRendererAssistant */}
+                            {(selectedStageModal.stage === 'ImageRendererAssistant' || selectedStageModal.stage === 'image_renderer_assistant') && 
+                             (() => {
+                               const { images, hasImages } = parseImageOutput(selectedStageModal.output);
+                               if (hasImages) {
+                                 return <ImageGallery images={images} title="Vygenerované obrázky" />;
+                               }
+                             })()}
+                            
+                            {/* Standardní JSON výstup */}
+                            <pre className="text-sm whitespace-pre-wrap break-words">
+                              {typeof selectedStageModal.output === 'string' 
+                                ? selectedStageModal.output 
+                                : JSON.stringify(selectedStageModal.output, null, 2)}
+                            </pre>
+                          </>
                         ) : (
                           <p className="text-gray-500 italic">Žádný výstup</p>
                         )}
@@ -581,57 +711,69 @@ export default function WorkflowRunDetailPage() {
           </div>
         )}
 
-        {/* Final Output Summary */}
+        {/* Final Output Summary - s podporou 10 asistentů */}
         {workflowResult?.result && workflowRun?.status === 'COMPLETED' && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              🎯 Shrnutí výstupu
+              🎯 Shrnutí výstupu (10 asistentů)
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {workflowResult.result.generated && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="font-medium text-blue-900 mb-2">✍️ Generovaný obsah</div>
-                  <div className="text-sm text-blue-700">
-                    {workflowResult.result.generated.length} znaků
-                  </div>
-                </div>
-              )}
-              
-              {workflowResult.result.structured && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="font-medium text-green-900 mb-2">🏗️ Strukturovaný markup</div>
-                  <div className="text-sm text-green-700">
-                    JSON-LD struktura
-                  </div>
-                </div>
-              )}
-              
-              {workflowResult.result.enriched && (
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <div className="font-medium text-purple-900 mb-2">🔍 Obohacený obsah</div>
-                  <div className="text-sm text-purple-700">
-                    S entitami a metadaty
-                  </div>
-                </div>
-              )}
-              
-              {workflowResult.result.faq_final && (
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <div className="font-medium text-orange-900 mb-2">❓ FAQ sekce</div>
-                  <div className="text-sm text-orange-700">
-                    Konverzační FAQ
-                  </div>
-                </div>
-              )}
-            </div>
             
-            {workflowResult.result.saved_to && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            {/* Statistiky pipeline */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="font-medium text-blue-900 mb-2">📝 Brief</div>
+                <div className="text-sm text-blue-700">Zadání projektu</div>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="font-medium text-green-900 mb-2">🔍 Research</div>
+                <div className="text-sm text-green-700">Výzkum tématu</div>
+              </div>
+              
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="font-medium text-purple-900 mb-2">✍️ Obsah</div>
+                <div className="text-sm text-purple-700">Draft + Humanizace</div>
+              </div>
+              
+              <div className="bg-orange-50 rounded-lg p-4">
+                <div className="font-medium text-orange-900 mb-2">📈 SEO</div>
+                <div className="text-sm text-orange-700">Optimalizace</div>
+              </div>
+              
+              <div className="bg-pink-50 rounded-lg p-4">
+                <div className="font-medium text-pink-900 mb-2">🎨 Média</div>
+                <div className="text-sm text-pink-700">Obrázky + Publikace</div>
+              </div>
+            </div>
+
+            {/* Speciální sekce pro vygenerované obrázky */}
+            {workflowResult?.result?.stage_logs && (() => {
+              const imageStage = workflowResult.result.stage_logs.find((log: any) => 
+                log.stage === 'ImageRendererAssistant' && log.status === 'COMPLETED'
+              );
+              if (imageStage && imageStage.output && imageStage.output.images) {
+                const images = imageStage.output.images;
+                if (images && images.length > 0) {
+                  return (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 mb-4">
+                      <ImageGallery images={images} title="🎨 Vygenerované obrázky z DALL·E" />
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
+            
+            {/* Finální výstup info */}
+            {workflowResult.result.final_output && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-medium text-gray-900">💾 Uloženo do:</span>
-                    <span className="ml-2 text-sm text-gray-600 font-mono">
-                      {workflowResult.result.saved_to}
+                    <span className="font-medium text-gray-900">🚀 Finální článek:</span>
+                    <span className="ml-2 text-sm text-gray-600">
+                      {typeof workflowResult.result.final_output === 'string' 
+                        ? `${workflowResult.result.final_output.length} znaků` 
+                        : 'Připraven k publikaci'}
                     </span>
                   </div>
                 </div>

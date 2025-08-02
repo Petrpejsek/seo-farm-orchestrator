@@ -18,7 +18,7 @@ def get_api_key(service: str) -> Optional[str]:
     try:
         # Pokus o načtení z backendu
         backend_url = os.getenv("API_BASE_URL", "http://localhost:8000")
-        response = requests.get(f"{backend_url}/api/api-keys/{service}", timeout=5)
+        response = requests.get(f"{backend_url}/api-keys/{service}", timeout=5)
         
         if response.status_code == 200:
             data = response.json()

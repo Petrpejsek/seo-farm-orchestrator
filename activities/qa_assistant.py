@@ -110,44 +110,17 @@ Vrať pouze JSON bez komentářů.
                 json_end = result.find("```", json_start)
                 if json_end != -1:
                     json_str = result[json_start:json_end].strip()
-                    return json.loads(json_str)
-            return json.loads(result)
-        except json.JSONDecodeError:
-            # Fallback analýza
-            word_count = len(content.split())
-            has_headings = '<h1>' in content or '<h2>' in content
-            has_meta = '<meta' in content
-            
-            score = 70
-            if word_count > 500: score += 10
-            if has_headings: score += 10
-            if has_meta: score += 10
-            
-            return {
-                "grammar_check": {"score": score, "errors": [], "suggestions": ["Ruční kontrola doporučena"]},
-                "seo_analysis": {"score": score, "title_optimization": "OK" if has_headings else "Missing"},
-                "readability": {"score": score, "clarity": "Standard"},
-                "technical_check": {"score": score, "html_validation": "Basic check passed"},
-                "overall_assessment": {
-                    "ready_for_publish": score >= 80,
-                    "overall_score": score,
-                    "priority_fixes": ["Doporučena ruční kontrola"]
-                }
-            }
+                    qa_result = json.loads(json_str)
+                    return {"output": json.dumps(qa_result, ensure_ascii=False)}
+            qa_result = json.loads(result)
+            return {"output": json.dumps(qa_result, ensure_ascii=False)}
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ QA JSON parsing selhalo: {e}")
+            raise Exception(f"QAAssistant nelze parsovat JSON response: {e}")
         
     except Exception as e:
-        logger.error(f"❌ Chyba při QA kontrole: {e}")
-        return {
-            "grammar_check": {"score": 70, "errors": [], "suggestions": []},
-            "seo_analysis": {"score": 70},
-            "readability": {"score": 70},
-            "technical_check": {"score": 70},
-            "overall_assessment": {
-                "ready_for_publish": False,
-                "overall_score": 70,
-                "priority_fixes": ["QA kontrola selhala - nutná ruční kontrola"]
-            }
-        }
+        logger.error(f"❌ QA kontrola selhala: {e}")
+        raise Exception(f"QAAssistant selhal: {e}")
 
 def qa_assistant_sync(content: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
     import asyncio

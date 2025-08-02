@@ -1,0 +1,215 @@
+{
+  "assistants_executed": 11,
+  "final_output": "Zdá se, že máte neplatný `function_key`. Můžete mi říct více o tom, co se snažíte udělat, nebo poskytnout další kontext, abych vám mohl lépe pomoci? Pokud se jedná o chybu v nějakém programovacím kódu, ujistěte se, že `function_key` je správně definován a odpovídá očekávanému formátu nebo hodnotě.",
+  "pipeline_success": true,
+  "project_id": "a5999892-ae09-46fd-a3c2-7a8af516f8ac",
+  "run_id": "250775bb-6289-4d08-80cf-0c4e2db4ce5d",
+  "stage_logs": [
+    {
+      "stage": "load_assistants_config",
+      "status": "STARTED",
+      "timestamp": 1753882520.137459
+    },
+    {
+      "duration": 0.24386096000671387,
+      "stage": "load_assistants_config",
+      "status": "COMPLETED",
+      "timestamp": 1753882520.38132
+    },
+    {
+      "function_key": "brief_assistant",
+      "order": 1,
+      "stage": "BriefAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882520.38132
+    },
+    {
+      "duration": 3.5601980686187744,
+      "function_key": "brief_assistant",
+      "metadata": {},
+      "order": 1,
+      "output": "{\n  \"brief\": \"Analyzujte příčiny a důsledky chyby nevalidního function_key v softwarových systémech.\",\n  \"goal\": \"Poskytnout přehled o tom, jaké jsou nejčastější důvody nevalidního function_key, jaké problémy to může způsobit během exekuce a jaké jsou nejlepší postupy pro prevenci těchto chyb.\",\n  \"metadata\": {\n    \"style\": \"Informativní článek\",\n    \"audience\": \"Softwaroví inženýři, vývojáři a IT specialisté\",\n    \"tone\": \"Odborný a analytický\"\n  }\n}",
+      "stage": "BriefAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882523.941518
+    },
+    {
+      "function_key": "research_assistant",
+      "order": 2,
+      "stage": "ResearchAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882523.941518
+    },
+    {
+      "duration": 1.1200718879699707,
+      "function_key": "research_assistant",
+      "metadata": {},
+      "order": 2,
+      "output": "{\n  \"statistics\": [],\n  \"references\": [],\n  \"companies\": [],\n  \"quotes\": [],\n  \"services\": []\n}",
+      "stage": "ResearchAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882525.06159
+    },
+    {
+      "function_key": "fact_validator_assistant",
+      "order": 3,
+      "stage": "FactValidatorAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882525.06159
+    },
+    {
+      "duration": 0.7234899997711182,
+      "function_key": "fact_validator_assistant",
+      "metadata": {},
+      "order": 3,
+      "output": "```json\n[]\n```",
+      "stage": "FactValidatorAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882525.78508
+    },
+    {
+      "function_key": "draft_assistant",
+      "order": 4,
+      "stage": "DraftAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882525.78508
+    },
+    {
+      "duration": 1.6316981315612793,
+      "function_key": "draft_assistant",
+      "metadata": {},
+      "order": 4,
+      "output": "Je mi líto, ale nemohu provést tento požadavek.",
+      "stage": "DraftAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882527.416778
+    },
+    {
+      "function_key": "humanizer_assistant",
+      "order": 5,
+      "stage": "HumanizerAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882527.416778
+    },
+    {
+      "duration": 1.0530319213867188,
+      "function_key": "humanizer_assistant",
+      "metadata": {},
+      "order": 5,
+      "output": "Omlouvám se, ale nemohu vám pomoci s tímto požadavkem.",
+      "stage": "HumanizerAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882528.46981
+    },
+    {
+      "function_key": "seo_assistant",
+      "order": 6,
+      "stage": "SEOAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882528.46981
+    },
+    {
+      "duration": 11.948957920074463,
+      "function_key": "seo_assistant",
+      "metadata": {},
+      "order": 6,
+      "output": "Rozumím, že potřebujete vytvořit SEO-ready balíček pro článek, který se má zabývat testováním nevalidního `function_key` a očekávaným pádem během exekuce. Zde je návrh SEO balíčku:\n\n1. 🏷️ SEO Metadata:\n   - **title**: Testování nevalidního function_key: Očekávaný pád během exekuce\n   - **meta_description**: Podrobný průvodce, jak testovat nevalidní function_key a proč může selhat během exekuce.\n   - **slug**: testovani-nevalidni-function-key-pad-behem-exekuce\n\n2. 🧱 Nadpisy a Struktura:\n   - **H1**: Testování nevalidního function_key: Co očekávat\n   - **H2**: Co je function_key a jeho role v systémech\n   - **H2**: Proč může být function_key nevalidní\n     - **H3**: Časté příčiny nevalidních function_keys\n   - **H2**: Jak správně testovat function_key\n     - **H3**: Nejlepší praktiky pro testování\n   - **H2**: Očekávané chování při selhání\n   - **H2**: Jak řešit problémy s nevalidním function_key\n\n3. 🔑 Klíčová slova (max 10):\n   - function_key\n   - testování function_key\n   - nevalidní function_key\n   - selhání exekuce\n   - debug function_key\n   - řešení chyb function_key\n   - function_key best practices\n   - systémová integrita\n   - selhání systému\n   - příčiny nevalidních function_keys\n\n4. 🔗 Interní odkazy (3):\n   - [Základy systémové integrace](https://vasweb.cz/zaklady-systemove-integrace)\n   - [Jak efektivně debugovat software](https://vasweb.cz/jak-efektivne-debugovat-software)\n   - [Bezpečnostní protokoly a jejich implementace](https://vasweb.cz/bezpecnostni-protokoly-implementace)\n\n5. 🌍 Externí odkazy (3):\n   - [Understanding API Keys](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)\n   - [Best Practices for API Key Management](https://www.oauth.com/oauth2-servers/access-tokens/)\n   - [Common API Security Risks](https://owasp.org/www-project-api-security/)\n\n6. 🧩 Schema.org markup (JSON-LD):\n```json\n{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Article\",\n  \"headline\": \"Testování nevalidního function_key: Očekávaný pád během exekuce\",\n  \"author\": \"SEO Farm Orchestrator\",\n  \"datePublished\": \"2025-07-30\",\n  \"image\": \"https://example.com/image.jpg\",\n  \"articleBody\": \"Podrobný průvodce, jak testovat nevalidní function_key a proč může selhat během exekuce.\"\n}\n```\n\n🎯 Tímto máte kompletní SEO balíček pro váš článek. Pokud potřebujete další úpravy nebo informace, dejte mi vědět!",
+      "stage": "SEOAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882540.418768
+    },
+    {
+      "function_key": "multimedia_assistant",
+      "order": 7,
+      "stage": "MultimediaAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882540.418768
+    },
+    {
+      "duration": 2.6385550498962402,
+      "function_key": "multimedia_assistant",
+      "metadata": {},
+      "order": 7,
+      "output": "Omlouvám se, ale zdá se, že nemám k dispozici potřebné informace k vytvoření návrhu vizuálů. Pokud máte konkrétní článek nebo další detaily, ráda vám pomohu s návrhem vizuálů, které by mohly článek podpořit.",
+      "stage": "MultimediaAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882543.057323
+    },
+    {
+      "function_key": "qa_assistant",
+      "order": 8,
+      "stage": "\tQAAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882543.057323
+    },
+    {
+      "duration": 4.56984806060791,
+      "function_key": "qa_assistant",
+      "metadata": {},
+      "order": 8,
+      "output": "Bohužel, nemohu poskytnout odpověď na tento požadavek, protože se zdá, že se jedná o technický test nebo chybu, která je mimo mojí specializaci zaměřenou na generování FAQ sekcí pro články. Pokud máte k dispozici text článku nebo konkrétní dotazy týkající se obsahu, rád pomohu s tvorbou relevantních otázek a odpovědí.",
+      "stage": "\tQAAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882547.627171
+    },
+    {
+      "function_key": "image_renderer_assistant",
+      "order": 9,
+      "stage": "ImageRendererAssistant ",
+      "status": "STARTED",
+      "timestamp": 1753882547.627171
+    },
+    {
+      "duration": 17.26521587371826,
+      "function_key": "image_renderer_assistant",
+      "metadata": {},
+      "order": 9,
+      "output": "{\n  \"generated_images\": [\n    {\n      \"url\": \"https://oaidalleapiprodscus.blob.core.windows.net/private/org-kldER7o3EVF2ixi5T1PUZqZj/user-wk6IWRgRCc4twV7kYl0WJBJt/img-jU0qYoOWP1laj17UPLZBOH1M.png?st=2025-07-30T12%3A36%3A04Z&se=2025-07-30T14%3A36%3A04Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=cc612491-d948-4d2e-9821-2683df3719f5&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-30T06%3A35%3A40Z&ske=2025-07-31T06%3A35%3A40Z&sks=b&skv=2024-08-04&sig=Sw3zCVfb1rgGcCd08qF2DtNqc1OJt7DnolJtemqdvic%3D\",\n      \"revised_prompt\": \"Generate a high-quality, professional image related to a test execution failing due to an invalid function key. The image should convey the concept of software testing and error detection, particularly in relation to function keys. It should be appropriate for an SEO blog article, with a clean, clear, and visually engaging style that draws the viewer's attention. It could illustrate the testing process, the moment of failure due to the invalid function key, or the consequences of such a failure. Be creative in how you visualize these abstract concepts, keeping in mind the desired mood and feel.\"\n    }\n  ],\n  \"image_urls\": [\n    \"https://oaidalleapiprodscus.blob.core.windows.net/private/org-kldER7o3EVF2ixi5T1PUZqZj/user-wk6IWRgRCc4twV7kYl0WJBJt/img-jU0qYoOWP1laj17UPLZBOH1M.png?st=2025-07-30T12%3A36%3A04Z&se=2025-07-30T14%3A36%3A04Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=cc612491-d948-4d2e-9821-2683df3719f5&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-30T06%3A35%3A40Z&ske=2025-07-31T06%3A35%3A40Z&sks=b&skv=2024-08-04&sig=Sw3zCVfb1rgGcCd08qF2DtNqc1OJt7DnolJtemqdvic%3D\"\n  ],\n  \"image_descriptions\": [\n    \"AI generated image for: Test s nevalidn\\u00edm function_key - m\\u00e1 spadnout b\\u011bhem exekuce\"\n  ],\n  \"alt_texts\": [\n    \"Professional image related to Test s nevalidn\\u00edm function_key - m\\u00e1 spadnout b\\u011bhem exekuce\"\n  ],\n  \"prompts_used\": [\n    \"Create a professional, high-quality image related to: Test s nevalidn\\u00edm function_key - m\\u00e1 spadnout b\\u011bhem exekuce. Make it suitable for SEO blog article, clean and engaging visual style.\"\n  ],\n  \"model_used\": \"dall-e-3\",\n  \"config\": {}\n}",
+      "stage": "ImageRendererAssistant ",
+      "status": "COMPLETED",
+      "timestamp": 1753882564.892387
+    },
+    {
+      "function_key": "publish_assistant",
+      "order": 10,
+      "stage": "PublishAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882564.892387
+    },
+    {
+      "duration": 2.705559015274048,
+      "function_key": "publish_assistant",
+      "metadata": {},
+      "order": 10,
+      "output": "Zdá se, že jste zmínil test s neplatným `function_key`, což by mělo způsobit selhání během exekuce. Pokud potřebujete pomoc s konkrétními detaily nebo řešením, neváhejte poskytnout více informací.",
+      "stage": "PublishAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882567.597946
+    },
+    {
+      "function_key": "invalid_function_that_does_not_exist",
+      "order": 99,
+      "stage": "TestInvalidAssistant",
+      "status": "STARTED",
+      "timestamp": 1753882567.597946
+    },
+    {
+      "duration": 1.9851741790771484,
+      "function_key": "invalid_function_that_does_not_exist",
+      "metadata": {},
+      "order": 99,
+      "output": "Zdá se, že máte neplatný `function_key`. Můžete mi říct více o tom, co se snažíte udělat, nebo poskytnout další kontext, abych vám mohl lépe pomoci? Pokud se jedná o chybu v nějakém programovacím kódu, ujistěte se, že `function_key` je správně definován a odpovídá očekávanému formátu nebo hodnotě.",
+      "stage": "TestInvalidAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1753882569.58312
+    },
+    {
+      "stage": "save_pipeline_result",
+      "status": "STARTED",
+      "timestamp": 1753882569.58312
+    }
+  ],
+  "topic": "Test s nevalidním function_key - má spadnout během exekuce",
+  "total_assistants": 11,
+  "workflow_id": "assistant_pipeline_test_s_nevalidním_function_key_-_má_spadnout_během_exekuce_1753882519"
+}

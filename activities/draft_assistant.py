@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Inicializace OpenAI klienta
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-async def draft_assistant(input_data: Dict[str, Any], assistant_id: Optional[str] = None) -> str:
+async def draft_assistant(input_data: Dict[str, Any], assistant_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Vytváří první draft článku na základě research dat a briefu.
     
@@ -158,45 +158,13 @@ Vytvoř kompletní článek, který je připravený k publikaci.
         draft_content = response.choices[0].message.content.strip()
         logger.info(f"✅ OpenAI API úspěšně vytvořilo draft: {len(draft_content)} znaků")
         
-        return draft_content
+        return {"output": draft_content}
             
     except Exception as e:
-        logger.error(f"❌ Chyba při volání OpenAI API: {e}")
-        
-        # Fallback draft
-        return _fallback_draft(topic, brief_text, research_summary)
+        logger.error(f"❌ Draft creation selhala: {e}")
+        raise Exception(f"DraftAssistant selhal: {e}")
 
-def _fallback_draft(topic: str, brief: str, research: str) -> str:
-    """Fallback draft když OpenAI API není dostupné"""
-    logger.info(f"🔄 Používám fallback draft pro téma: {topic}")
-    
-    fallback_content = f"""
-<h1>{topic}</h1>
 
-<p>Tento článek se zabývá tématem <strong>{topic}</strong> a poskytuje přehled klíčových informací a poznatků.</p>
-
-<h2>Úvod</h2>
-<p>V dnešní době je téma {topic} velmi aktuální a důležité. Následující článek vám poskytne komplexní pohled na tuto problematiku.</p>
-
-{f'<p><strong>Zadání:</strong> {brief}</p>' if brief else ''}
-
-<h2>Hlavní body</h2>
-<ul>
-<li>Komplexní analýza tématu {topic}</li>
-<li>Praktické tipy a doporučení</li>
-<li>Aktuální trendy a novinky</li>
-<li>Závěry a doporučení pro praxi</li>
-</ul>
-
-{f'<h2>Research poznatky</h2><p>{research}</p>' if research else ''}
-
-<h2>Závěr</h2>
-<p>Téma {topic} je složité a vyžaduje důkladnou analýzu. Doufáme, že tento článek vám poskytl užitečné informace a poznatky.</p>
-
-<p><em>Poznámka: Tento článek byl vygenerován v fallback módu. Pro finální verzi doporučujeme ruční revizi a rozšíření obsahu.</em></p>
-    """
-    
-    return fallback_content.strip()
 
 # Synchronní wrapper pro zpětnou kompatibilitu
 def draft_assistant_sync(input_data: Dict[str, Any], assistant_id: Optional[str] = None) -> str:

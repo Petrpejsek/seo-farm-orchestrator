@@ -1,0 +1,17 @@
+
+> seo-farm-frontend@0.1.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3001
+   - Environments: .env.local
+
+ ✓ Ready in 3.1s
+ ○ Compiling /page ...
+ ✓ Compiled /page in 2s (470 modules)
+ ✓ Compiled in 396ms (246 modules)
+ ✓ Compiled /workflows/page in 320ms (462 modules)
+ ✓ Compiled /workflows/[workflow_id]/[run_id]/page in 381ms (470 modules)
+ ○ Compiling /(dashboard)/projects/page ...
+ ✓ Compiled /(dashboard)/projects/page in 821ms (476 modules)
+ ✓ Compiled /(dashboard)/projects/[project_id]/page in 458ms (482 modules)

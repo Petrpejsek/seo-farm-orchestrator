@@ -45,16 +45,123 @@ interface OutputModalProps {
 const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) => {
   if (!isOpen) return null;
 
+  // Function to copy output to clipboard
+  const copyOutput = async () => {
+    try {
+      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+      await navigator.clipboard.writeText(textToCopy);
+      // You could add a toast notification here
+      console.log('✅ Výstup zkopírován do clipboardu');
+    } catch (err) {
+      console.error('❌ Chyba při kopírování:', err);
+    }
+  };
+
+  // Function to render image previews
+  const renderImagePreviews = (images: string | string[]) => {
+    const imageUrls = Array.isArray(images) ? images : [images];
+    
+    return (
+      <div className="mb-4">
+        <h5 className="font-medium mb-3 text-gray-700">🖼️ Generované obrázky:</h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {imageUrls.map((url, index) => (
+            <div key={index} className="relative group">
+              <img 
+                src={url} 
+                alt={`AI generated visualization ${index + 1}`}
+                className="w-full h-auto max-w-full rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => window.open(url, '_blank')}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => window.open(url, '_blank')}
+                  className="bg-black bg-opacity-50 text-white p-1 rounded text-xs hover:bg-opacity-70"
+                >
+                  🔍 Otevřít
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const formatOutput = (output: any) => {
     if (!output) return <div className="text-gray-500">Žádný výstup k dispozici</div>;
+
+    // Check for image URLs first
+    let hasImages = false;
+    let imageContent = null;
+    
+    if (typeof output === 'object') {
+      // Check for image_url field
+      if (output.image_url && typeof output.image_url === 'string') {
+        hasImages = true;
+        imageContent = renderImagePreviews(output.image_url);
+      }
+      // Check for images array
+      else if (output.images && Array.isArray(output.images) && output.images.length > 0) {
+        hasImages = true;
+        // Handle array of objects with url property (ImageRenderer format)
+        const imageUrls = output.images.map(item => 
+          typeof item === 'string' ? item : item.url || item
+        ).filter(url => url && typeof url === 'string');
+        
+        if (imageUrls.length > 0) {
+          imageContent = renderImagePreviews(imageUrls);
+        } else {
+          imageContent = renderImagePreviews(output.images);
+        }
+      }
+      // Check for nested image URLs in various formats
+      else if (output.generated_images) {
+        if (typeof output.generated_images === 'string') {
+          hasImages = true;
+          imageContent = renderImagePreviews(output.generated_images);
+        } else if (Array.isArray(output.generated_images)) {
+          hasImages = true;
+          imageContent = renderImagePreviews(output.generated_images);
+        }
+      }
+    }
 
     // Try to detect format
     if (typeof output === 'string') {
       // Check if it's JSON
       try {
         const parsed = JSON.parse(output);
+        
+        // Check for images in parsed JSON
+        let parsedImages = null;
+        if (parsed.image_url && typeof parsed.image_url === 'string') {
+          parsedImages = renderImagePreviews(parsed.image_url);
+        } else if (parsed.images && Array.isArray(parsed.images) && parsed.images.length > 0) {
+          parsedImages = renderImagePreviews(parsed.images);
+        } else if (parsed.generated_images) {
+          if (typeof parsed.generated_images === 'string') {
+            parsedImages = renderImagePreviews(parsed.generated_images);
+          } else if (Array.isArray(parsed.generated_images)) {
+            // Handle array of objects with url property
+            const imageUrls = parsed.generated_images.map(item => 
+              typeof item === 'string' ? item : item.url || item
+            ).filter(url => url);
+            if (imageUrls.length > 0) {
+              parsedImages = renderImagePreviews(imageUrls);
+            }
+          }
+        } else if (parsed.image_urls && Array.isArray(parsed.image_urls)) {
+          parsedImages = renderImagePreviews(parsed.image_urls);
+        }
+        
         return (
           <div>
+            {parsedImages}
             <h5 className="font-medium mb-3 text-gray-700">📄 JSON Output:</h5>
             <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-auto max-h-96 font-mono">
               {JSON.stringify(parsed, null, 2)}
@@ -66,6 +173,7 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
         if (output.includes('##') || output.includes('**') || output.includes('[') && output.includes('](')) {
           return (
             <div>
+              {hasImages && imageContent}
               <h5 className="font-medium mb-3 text-gray-700">📝 Markdown Output:</h5>
               <div className="bg-white border border-gray-200 p-4 rounded-lg max-h-96 overflow-auto prose prose-sm max-w-none">
                 <div dangerouslySetInnerHTML={{__html: output.replace(/\n/g, '<br/>')}} />
@@ -77,6 +185,7 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
         // Plain text
         return (
           <div>
+            {hasImages && imageContent}
             <h5 className="font-medium mb-3 text-gray-700">📄 Text Output:</h5>
             <pre className="bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm overflow-auto max-h-96 whitespace-pre-wrap font-mono">
               {output}
@@ -88,6 +197,7 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
       // Object/array
       return (
         <div>
+          {hasImages && imageContent}
           <h5 className="font-medium mb-3 text-gray-700">📊 Structured Data:</h5>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-auto max-h-96 font-mono">
             {JSON.stringify(output, null, 2)}
@@ -114,7 +224,13 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
         <div className="p-6 overflow-auto max-h-[70vh]">
           {formatOutput(output)}
         </div>
-        <div className="flex justify-end p-6 border-t border-gray-200">
+        <div className="flex justify-between p-6 border-t border-gray-200">
+          <button
+            onClick={copyOutput}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+          >
+            📋 Zkopírovat výstup
+          </button>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
@@ -326,29 +442,17 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
   );
 };
 
-const PipelineProgress = ({ stages, expandedAssistants, toggleAssistantExpand, showOutputModal }: {
+const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAssistantExpand, showOutputModal }: {
   stages: any[]
+  assistantOrder: string[]
   expandedAssistants: Set<number>
   toggleAssistantExpand: (index: number) => void
   showOutputModal: (output: any, stageName: string) => void
 }) => {
-  // ✅ FINÁLNÍ POŘADÍ ASISTENTŮ V PIPELINE (aktualizováno podle backend specifikace)
-  const ASSISTANT_ORDER = [
-    'BriefAssistant',           // 1. Brief creation
-    'ResearchAssistant',        // 2. Research & data gathering
-    'FactValidatorAssistant',   // 3. Fact checking & validation
-    'DraftAssistant',           // 4. Content drafting
-    'HumanizerAssistant',       // 5. Content humanization
-    'SEOAssistant',             // 6. SEO optimization
-    'MultimediaAssistant',      // 7. Multimedia suggestions
-    'QAAssistant',              // 8. Quality assurance
-    'PublishAssistant'          // 9. Publishing preparation
-  ];
-
-  // Seřadíme asistenty podle předem definovaného pořadí
+  // Dynamické seřazení podle pořadí z databáze/workflow dat
   const sortedStages = [...stages].sort((a, b) => {
-    const indexA = ASSISTANT_ORDER.indexOf(a.stage);
-    const indexB = ASSISTANT_ORDER.indexOf(b.stage);
+    const indexA = assistantOrder.indexOf(a.stage);
+    const indexB = assistantOrder.indexOf(b.stage);
     
     // Pokud asistent není v seznamu, umístí se na konec
     if (indexA === -1 && indexB === -1) return 0;
@@ -422,6 +526,7 @@ export default function WorkflowDetailPage() {
   const run_id = decodeURIComponent(params.run_id as string)
 
   const [workflowData, setWorkflowData] = useState<WorkflowResult | null>(null)
+  const [assistantOrder, setAssistantOrder] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isTerminating, setIsTerminating] = useState(false)
@@ -449,6 +554,25 @@ export default function WorkflowDetailPage() {
       output: null,
       stageName: ''
     });
+  };
+
+  // Načtení pořadí asistentů z workflow dat
+  const extractAssistantOrder = (stageLogsData: any[]) => {
+    if (!stageLogsData || stageLogsData.length === 0) {
+      return [];
+    }
+    
+    // Extrahování stage names a seřazení podle timestampu (chronologické pořadí)
+    const assistantNames = stageLogsData
+      .filter(log => log.stage && log.stage !== 'load_assistants_config') // Filtrujeme konfigurační fázi
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)) // Seřazení chronologicky
+      .map(log => log.stage);
+      
+    // Odstranění duplicit ale zachování pořadí
+    const uniqueOrder = [...new Set(assistantNames)];
+    
+    console.log('🔄 Extrahováno pořadí asistentů z workflow:', uniqueOrder);
+    return uniqueOrder;
   };
 
   const fetchWorkflowResult = async () => {
@@ -483,6 +607,13 @@ export default function WorkflowDetailPage() {
       const data: WorkflowResult = await response.json()
       console.log('✅ Data loaded:', data)
       setWorkflowData(data)
+      
+      // Extrakce pořadí asistentů z stage logs
+      if (data.stage_logs) {
+        const order = extractAssistantOrder(data.stage_logs);
+        setAssistantOrder(order);
+      }
+      
       setError(null)
       
       // Stop polling if workflow is finished
@@ -786,6 +917,7 @@ export default function WorkflowDetailPage() {
             {workflowData.stage_logs && workflowData.stage_logs.length > 0 && (
               <PipelineProgress
                 stages={workflowData.stage_logs}
+                assistantOrder={assistantOrder}
                 expandedAssistants={expandedAssistants}
                 toggleAssistantExpand={toggleAssistantExpand}
                 showOutputModal={showOutputModal}
