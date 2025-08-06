@@ -1,0 +1,29 @@
+# 🛡️ BEZPEČNÉ WORKER ALIASES
+# Pro přidání do ~/.bashrc nebo ~/.zshrc:
+#
+# echo "source $(pwd)/.worker_aliases" >> ~/.bashrc
+# echo "source $(pwd)/.worker_aliases" >> ~/.zshrc
+
+# Worker management aliases
+alias worker-status='./manage_worker.sh status'
+alias worker-restart='./manage_worker.sh restart'  
+alias worker-start='./manage_worker.sh start'
+alias worker-stop='./manage_worker.sh stop'
+
+# Quick checks
+alias worker-check='ps aux | grep "production_worker" | grep -v grep'
+alias worker-logs='tail -20 worker_production.log'
+
+# Safety reminders
+alias worker-help='echo "🛡️ WORKER MANAGEMENT:"
+echo "worker-status   - Zobraz stav"  
+echo "worker-restart  - Bezpečný restart (DOPORUČENO)"
+echo "worker-start    - Spusť (jen pokud žádný neběží)"
+echo "worker-stop     - Zastavit všechny"
+echo "worker-check    - Rychlá kontrola procesů"
+echo "worker-logs     - Posledních 20 řádků logů"
+echo ""
+echo "⚠️  NIKDY nepoužívej manuální python production_worker.py &"'
+
+# Show help on load
+echo "🛡️ Worker aliases načteny! Spusť 'worker-help' pro nápovědu."

@@ -1,0 +1,138 @@
+# 🚨 ALERTING PRAVIDLA PRO SEO FARM
+# Prometheus alerting rules pro monitoring kritických stavů
+
+groups:
+  - name: seo_farm_critical
+    rules:
+      # Worker je down
+      - alert: SEOFarmWorkerDown
+        expr: up{job="seo-farm-worker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SEO Farm Worker je nedostupný"
+          description: "Worker proces neodpovídá více než 1 minutu"
+
+      # Vysoká chybovost workflow
+      - alert: SEOFarmHighWorkflowErrorRate
+        expr: |
+          (
+            rate(seo_farm_workflows_total{status="error"}[5m]) /
+            rate(seo_farm_workflows_total[5m])
+          ) * 100 > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vysoká chybovost workflow (>10%)"
+          description: "{{ $value | humanizePercentage }} workflow selhává posledních 5 minut"
+
+      # LLM timeouty
+      - alert: SEOFarmLLMTimeouts
+        expr: |
+          (
+            rate(seo_farm_llm_requests_total{status="error"}[10m]) /
+            rate(seo_farm_llm_requests_total[10m])
+          ) * 100 > 50
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vysoká chybovost LLM requestů (>50%)"
+          description: "{{ $value | humanizePercentage }} LLM requestů selhává posledních 10 minut"
+
+  - name: seo_farm_warning
+    rules:
+      # Dlouhé workflow
+      - alert: SEOFarmSlowWorkflow
+        expr: |
+          histogram_quantile(0.95, 
+            rate(seo_farm_workflow_duration_seconds_bucket[10m])
+          ) > 1200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pomalé workflow (>20 min)"
+          description: "95% workflow trvá déle než 20 minut"
+
+      # Vysoké využití CPU
+      - alert: SEOFarmHighCPU
+        expr: seo_farm_system_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Vysoké využití CPU (>80%)"
+          description: "CPU využití je {{ $value }}% posledních 5 minut"
+
+      # Vysoké využití paměti
+      - alert: SEOFarmHighMemory
+        expr: seo_farm_system_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Vysoké využití paměti (>85%)"
+          description: "Paměť využití je {{ $value }}% posledních 5 minut"
+
+      # Vysoké využití disku
+      - alert: SEOFarmHighDisk
+        expr: seo_farm_system_disk_usage_percent > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Vysoké využití disku (>90%)"
+          description: "Disk využití je {{ $value }}%"
+
+      # Hluboká fronta
+      - alert: SEOFarmDeepQueue
+        expr: seo_farm_queue_depth > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hluboká fronta (>10 úkolů)"
+          description: "{{ $labels.queue_name }} fronta obsahuje {{ $value }} úkolů"
+
+      # Žádná aktivita
+      - alert: SEOFarmNoActivity
+        expr: |
+          increase(seo_farm_worker_activities_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Žádná aktivita posledních 30 minut"
+          description: "Worker nezpracoval žádné aktivity posledních 30 minut"
+
+  - name: seo_farm_info
+    rules:
+      # Statistika workflow
+      - record: seo_farm:workflow_success_rate_5m
+        expr: |
+          (
+            rate(seo_farm_workflows_total{status="success"}[5m]) /
+            rate(seo_farm_workflows_total[5m])
+          ) * 100
+
+      # Průměrná doba workflow
+      - record: seo_farm:workflow_avg_duration_5m
+        expr: |
+          rate(seo_farm_workflow_duration_seconds_sum[5m]) /
+          rate(seo_farm_workflow_duration_seconds_count[5m])
+
+      # LLM response time percentily
+      - record: seo_farm:llm_response_time_p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            rate(seo_farm_llm_response_time_seconds_bucket[5m])
+          )
+
+      - record: seo_farm:llm_response_time_p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            rate(seo_farm_llm_response_time_seconds_bucket[5m])
+          )

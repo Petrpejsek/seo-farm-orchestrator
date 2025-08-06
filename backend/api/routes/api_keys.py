@@ -121,6 +121,12 @@ def validate_api_key_format(service: str, api_key: str) -> bool:
         return len(api_key) > 10  # ElevenLabs má různé formáty
     elif service.lower() == "heygen":
         return len(api_key) > 10
+    elif service.lower() == "fal":
+        # FAL.AI má dva formáty: fal-xxx nebo uuid:hash
+        import re
+        is_new_format = api_key.startswith("fal-")
+        is_old_format = re.match(r"^[a-f0-9-]{36}:[a-f0-9]{32}$", api_key)
+        return is_new_format or bool(is_old_format)
     else:
         return len(api_key) > 5  # Obecná validace
 

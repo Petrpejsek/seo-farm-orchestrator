@@ -1,0 +1,99 @@
+# 🛡️ SYSTEMD SERVICE TEMPLATE PRO TEMPORAL WORKER
+# =================================================
+# Template pro systemd service Temporal workera
+# NEAKTIVOVAT ZATÍM - konflikt s flock mechanismem!
+#
+# INSTALACE (až bude potřeba):
+# 1. Zkopíruj do /etc/systemd/system/temporal-worker.service
+# 2. Uprav cesty podle prostředí
+# 3. systemctl daemon-reload
+# 4. systemctl enable temporal-worker.service
+# 5. systemctl start temporal-worker.service
+#
+# ⚠️  POZOR: Tato služba používá master_worker_manager.sh
+# ⚠️  UJISTI SE, že žádný jiný proces nespouští worker!
+
+[Unit]
+Description=Temporal Worker for SEO Farm Orchestrator
+Documentation=https://temporal.io/
+After=network.target
+Wants=network-online.target
+
+# 🔗 ZÁVISLOSTI (volitelné)
+# After=temporal-server.service
+# Requires=postgresql.service
+
+[Service]
+Type=forking
+User=worker
+Group=worker
+
+# 📂 CESTY (UPRAVIT PODLE PROSTŘEDÍ!)
+WorkingDirectory=/opt/seo-farm
+ExecStart=/opt/seo-farm/master_worker_manager_production.sh start
+ExecStop=/opt/seo-farm/master_worker_manager_production.sh stop
+ExecReload=/opt/seo-farm/master_worker_manager_production.sh restart
+
+# 📁 PID soubor (automatic based on environment)
+PIDFile=/var/run/seo-farm/worker.pid
+
+# 🌍 ENVIRONMENT VARIABLES
+Environment=API_BASE_URL=http://localhost:8000
+Environment=TEMPORAL_HOST=localhost:7233
+Environment=TEMPORAL_NAMESPACE=default
+
+# 🛡️ SECURITY & RESTART POLICY
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Graceful shutdown timeout
+TimeoutStopSec=30
+
+# Resource limits (volitelné)
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# 🔒 SECURITY SANDBOXING (doporučené pro produkci)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/seo-farm-orchestrator
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=temporal-worker
+
+[Install]
+WantedBy=multi-user.target
+
+# 📋 USAGE EXAMPLES:
+# 
+# systemctl status temporal-worker     # Zobrazí stav
+# systemctl start temporal-worker      # Spustí service
+# systemctl stop temporal-worker       # Zastaví service  
+# systemctl restart temporal-worker    # Restartuje service
+# systemctl enable temporal-worker     # Auto-start při bootu
+# systemctl disable temporal-worker    # Zakáže auto-start
+# 
+# journalctl -u temporal-worker -f     # Live logs
+# journalctl -u temporal-worker --since "1 hour ago"  # Logs za poslední hodinu
+#
+# ⚠️  DŮLEŽITÉ POZNÁMKY:
+# 
+# 1. Tato service používá Type=forking, protože master_worker_manager.sh
+#    spouští python process na pozadí a uloží PID
+# 
+# 2. Service se pokusí o restart při selhání, ale respektuje flock lock
+#    z master_worker_manager.sh
+# 
+# 3. Pro produkční nasazení doporuč vytvořit dedicatedého uživatele 'worker'
+#    a upravit security nastavení
+# 
+# 4. Environment variables lze přepsat v systemd override:
+#    systemctl edit temporal-worker
+# 
+# 5. Před aktivací ověř, že master_worker_manager.sh funguje manuálně!

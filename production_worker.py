@@ -24,12 +24,24 @@ from temporalio.worker import Worker
 # Workflows
 from workflows.seo_workflow import SEOWorkflow
 from workflows.assistant_pipeline_workflow import AssistantPipelineWorkflow
+# Debug workflows - temporarily disabled
+# from workflows.debug_simple_workflows import (
+#     SingleAssistantTestWorkflow,
+#     DatabaseTestWorkflow,
+#     ImageGenerationTestWorkflow,
+#     PublishScriptTestWorkflow,
+#     ConnectionTestWorkflow
+# )
 
 # Aktivities - bezpečné verze
 from activities.safe_assistant_activities import (
     load_assistants_from_database,
     execute_assistant
 )
+
+# Publish activity - deterministický script
+from activities.publish_activity import publish_activity
+from activities.db_debug_assistant import db_debug_assistant
 
 # Originální aktivity (pokud existují)
 try:
@@ -71,7 +83,9 @@ class ProductionWorker:
             # Příprava aktivit
             activities = [
                 load_assistants_from_database,
-                execute_assistant
+                execute_assistant,
+                publish_activity  # 🔧 Deterministický publish script
+                # db_debug_assistant temporarily disabled due to async issue
             ]
             
             # Přidání originálních aktivit, pokud jsou dostupné
@@ -90,6 +104,7 @@ class ProductionWorker:
                 workflows=[
                     SEOWorkflow,
                     AssistantPipelineWorkflow
+                    # Debug workflows temporarily disabled
                 ],
                 activities=activities,
                 max_concurrent_activities=self.config.max_workers

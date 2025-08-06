@@ -1,0 +1,29 @@
+[Unit]
+Description=SEO Farm Orchestrator Worker
+After=network.target temporal.service
+
+[Service]
+Type=simple
+User=petrliesner
+WorkingDirectory=/Users/petrliesner/Farm new new new
+Environment=API_BASE_URL=http://localhost:8000
+Environment=TEMPORAL_HOST=localhost:7233
+Environment=LOG_LEVEL=INFO
+Environment=PYTHONPATH=/Users/petrliesner/Farm new new new
+ExecStart=/Users/petrliesner/Farm new new new/venv/bin/python production_worker.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Health check
+ExecStartPre=/bin/sleep 5
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

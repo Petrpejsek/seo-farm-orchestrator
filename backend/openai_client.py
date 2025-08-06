@@ -23,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 # 🎛️ FINÁLNÍ AUDITOVANÉ OPENAI PARAMETRY - ZCELA BEZ DEFAULTŮ!
 OPENAI_CONFIG = {
-    "model": "gpt-4o",  # Primární model
-    "fallback_model": "gpt-4",  # Fallback pokud gpt-4o není dostupný
+    "model": "gpt-4o",  # JEDINÝ MODEL - žádné fallbacky
     "temperature": 0.7,  # Kreativita vs konzistence
     "max_tokens": None,  # Bez omezení - necháváme na OpenAI API
     "top_p": 1.0,  # Nepoužívat současně s temperature
@@ -70,18 +69,11 @@ def get_api_key(service: str = "openai") -> str:
                 logger.info(f"✅ OpenAI API klíč načten z backend API")
                 return api_key
         
-        logger.warning(f"⚠️ Backend API nevrátilo platný klíč, zkouším environment variables")
+        logger.error(f"❌ Backend API nevrátilo platný klíč")
+        raise Exception("❌ OpenAI API klíč nenalezen v backend API")
     except Exception as e:
-        logger.warning(f"⚠️ Chyba při načítání API klíče z backend: {e}")
-    
-    # Fallback na environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key and api_key != "your-openai-api-key-here":
-        logger.info(f"✅ OpenAI API klíč načten z environment variables")
-        return api_key
-    
-    # Žádný platný klíč nenalezen
-    raise Exception("OpenAI API klíč nebyl nalezen ani v backend API ani v environment variables")
+        logger.error(f"❌ Chyba při načítání API klíče z backend: {e}")
+        raise Exception(f"❌ OpenAI API klíč není dostupný: {e}")
 
 class OpenAIClient(BaseLLMClient):
     """
@@ -121,7 +113,7 @@ class OpenAIClient(BaseLLMClient):
     def _log_config(self):
         """Loguje aktuální konfiguraci pro audit."""
         logger.info(f"📊 OPENAI CONFIG AUDIT:")
-        logger.info(f"   Model: {OPENAI_CONFIG['model']} (fallback: {OPENAI_CONFIG['fallback_model']})")
+        logger.info(f"   Model: {OPENAI_CONFIG['model']} (STRICT MODE - žádné fallbacky)")
         logger.info(f"   Temperature: {OPENAI_CONFIG['temperature']}")
         logger.info(f"   Max tokens: {OPENAI_CONFIG['max_tokens']}")
         logger.info(f"   Top_p: {OPENAI_CONFIG['top_p']}")
@@ -196,13 +188,9 @@ class OpenAIClient(BaseLLMClient):
             return result
             
         except Exception as e:
-            # Pokus o fallback model
-            if model_to_use != OPENAI_CONFIG["fallback_model"]:
-                logger.warning(f"⚠️ Model {model_to_use} selhal, zkouším fallback {OPENAI_CONFIG['fallback_model']}")
-                return self.chat_completion(system_prompt, user_message, OPENAI_CONFIG["fallback_model"])
-            else:
-                logger.error(f"❌ Chat completion selhalo i s fallback modelem: {str(e)}")
-                raise
+            # STRICT MODE - žádné fallbacky
+            logger.error(f"❌ Chat completion selhalo s modelem {model_to_use}: {str(e)}")
+            raise
     
     async def image_generation(
         self, 

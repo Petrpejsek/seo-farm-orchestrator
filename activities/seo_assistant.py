@@ -27,56 +27,53 @@ async def seo_assistant(content: str, assistant_id: Optional[str] = None) -> Dic
     
     logger.info(f"📈 SEOAssistant optimalizuje content: {len(content)} znaků")
     
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.5,
-        "top_p": 0.9,
-        "max_tokens": 2000,
-        "system_prompt": "Jsi SEO expert. Optimalizuješ obsah pro vyhledávače - přidáváš meta tagy, optimalizuješ nadpisy, klíčová slova a strukturu pro lepší ranking."
-    }
+
     
     if assistant_id and DATABASE_AVAILABLE:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
             if assistant:
-                default_params.update({
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
-                })
+                if not all([assistant.model, assistant.temperature is not None, assistant.top_p is not None, assistant.max_tokens, assistant.system_prompt]):
+                    raise Exception(f"❌ Asistent {assistant_id} má neúplnou konfiguraci!")
+                
+                params = {
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
+                }
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů: {e}")
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
+    else:
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! SEOAssistant nemůže běžet bez databázové konfigurace!")
     
-    prompt = f"""
-Optimalizuj následující content pro SEO:
-
-{content}
-
-POŽADAVKY:
-- Přidej/optimalizuj meta description (max 160 znaků)
-- Optimalizuj nadpisy (H1, H2, H3) pro klíčová slova
-- Přidej internal linking možnosti
-- Optimalizuj keyword density
-- Přidej schema.org markup kde je to vhodné
-- Zlepši strukturu pro featured snippets
-- Zachovej HTML strukturu
-
-Vrať pouze optimalizovaný HTML obsah.
-    """
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Optimalizuj následující content pro SEO:\n\n{content}"
     
     try:
+        # Inicializace OpenAI client
+        from utils.api_keys import get_api_key
+        
+        api_key = get_api_key("openai")
+        if not api_key:
+            logger.error("❌ OpenAI API klíč není k dispozici")
+            raise Exception("❌ OpenAI API klíč není k dispozici pro SEOAssistant")
+            
+        client = OpenAI(api_key=api_key)
+        
         response = client.chat.completions.create(
-            model=default_params["model"],
+            model=params["model"],
             messages=[
-                {"role": "system", "content": default_params["system_prompt"]},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": params["system_prompt"]},
+                {"role": "user", "content": user_message}
             ],
-            temperature=default_params["temperature"],
-            top_p=default_params["top_p"],
-            max_tokens=default_params["max_tokens"]
+            temperature=params["temperature"],
+            top_p=params["top_p"],
+            max_tokens=params["max_tokens"]
         )
         
         optimized_content = response.choices[0].message.content.strip()

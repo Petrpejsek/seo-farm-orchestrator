@@ -127,7 +127,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
 };
 
 /**
- * Komponenta pro zobrazení galerie obrázků z DALL·E API
+ * Komponenta pro zobrazení galerie obrázků z AI image API
  */
 const ImageGallery: React.FC<ImageGalleryProps> = ({
   images,

@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # 🚀 SEO Farm Orchestrator - Start Script
+# ⚠️  WARNING: Worker se spouští výhradně přes master_worker_manager.sh
+# ⚠️  TENTO SKRIPT NESPOUŠTÍ TEMPORAL WORKER!
+# ⚠️  Pro worker použij: ./master_worker_manager.sh start
+
 echo "🔥 Spouštím SEO Farm Orchestrator..."
 
 # Zastavení starých procesů

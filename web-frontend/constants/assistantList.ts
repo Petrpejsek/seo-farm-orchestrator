@@ -1,5 +1,5 @@
 /**
- * Finální specifikace 10 asistentů pro SEO Farm Orchestrator
+ * Finální specifikace 9 asistentů pro SEO Farm Orchestrator
  * 
  * KRITICKÉ: Toto pořadí MUSÍ odpovídat backend implementaci!
  * Každá změna zde vyžaduje odpovídající změnu v backend/activities/assistant_activities.py
@@ -156,27 +156,12 @@ export const FINAL_ASSISTANTS: AssistantConfig[] = [
     icon: "🎨", 
     color: "text-violet-600",
     bgColor: "bg-violet-50",
-    description: "Generuje obrázky pomocí DALL·E API na základě multimedia návrhů",
+    description: "Generuje obrázky pomocí FAL.AI API na základě multimedia návrhů",
     inputType: "multimedia_suggestions",
     outputType: "generated_images",
-    apiType: "DALLE",
-    model: "dall-e-3",
+    apiType: "IMAGE",
+    model: "imagen-4",
     estimatedDuration: 120
-  },
-  {
-    id: "publish_assistant",
-    name: "PublishAssistant", 
-    slug: "publish_assistant",
-    order: 10,
-    icon: "🚀",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    description: "Připravuje finální obsah pro publikování a export",
-    inputType: "generated_images", 
-    outputType: "published_content",
-    apiType: "GPT",
-    model: "gpt-4o",
-    estimatedDuration: 45
   }
 ];
 
@@ -224,8 +209,8 @@ export const getAssistantProgress = (completedOrder: number): number => {
 /**
  * VALIDAČNÍ KONSTANTY
  */
-export const EXPECTED_ASSISTANT_COUNT = 10;
-export const EXPECTED_ORDER_SEQUENCE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+export const EXPECTED_ASSISTANT_COUNT = 9;
+export const EXPECTED_ORDER_SEQUENCE = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /**
  * Validace konfigurace asistentů

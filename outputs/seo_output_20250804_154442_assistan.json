@@ -1,0 +1,367 @@
+{
+  "assistants_executed": 9,
+  "final_output": {
+    "config": {
+      "provider": "gemini"
+    },
+    "images": [
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "A detailed infographic illustrating the CI/CD process, showing the flow from Continuous Integration (CI) to Continuous Deployment (CD), including key stages like code integration, automated testing, and deployment. Include icons for popular tools like Jenkins, GitHub Actions, and GitLab CI/CD. Style: flat illustration, colors: blue, green, and orange, aspect ratio: 9:16.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Infografika znázorňuje proces CI/CD, včetně klíčových fází a nástrojů, což pomáhá čtenářům pochopit, jak CI/CD pipeline funguje.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Infografika zobrazující proces CI/CD od integrace po nasazení s ikonami nástrojů jako Jenkins a GitHub Actions.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "sekce Implementace CI/CD pipeline",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "A vector chart showing the stages of implementing a CI/CD pipeline: planning, development, testing, deployment, and monitoring. Include labels for each stage and highlight best practices. Style: vector chart, colors: teal and grey, aspect ratio: 3:2.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Graf znázorňuje jednotlivé fáze implementace CI/CD pipeline, což čtenářům pomáhá pochopit proces krok za krokem.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Graf s fázemi implementace CI/CD pipeline, včetně plánování, testování a nasazení.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "sekce Nástroje pro CI/CD",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Interaktivní seznam nástrojů pro CI/CD, kde uživatelé mohou prozkoumávat různé platformy jako GitHub Actions, GitLab CI/CD a Jenkins, včetně jejich hlavních funkcí a výhod.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Interaktivní seznam nástrojů CI/CD pro prozkoumání funkcí a výhod.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "sekce Testování v CI/CD",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "An infographic illustrating the testing pyramid in CI/CD, showing unit tests at the base, integration tests in the middle, and end-to-end tests at the top. Include descriptions and examples for each test type. Style: flat illustration, colors: pastel shades, aspect ratio: 3:2.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Infografika znázorňuje pyramid testování v CI/CD, což pomáhá čtenářům pochopit různé úrovně testování.",
+        "status": "failed",
+        "url": ""
+      },
+      {
+        "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+        "prompt": "Infografika pyramidy testování v CI/CD s jednotkovými, integračními a end-to-end testy.",
+        "status": "failed",
+        "url": ""
+      }
+    ],
+    "model": "imagen-4",
+    "successful_count": 0,
+    "total_count": 14
+  },
+  "pipeline_success": true,
+  "project_id": "a5999892-ae09-46fd-a3c2-7a8af516f8ac",
+  "run_id": "0198754e-c4f8-7a16-a304-4f6964a13b49",
+  "stage_logs": [
+    {
+      "stage": "load_assistants_config",
+      "status": "STARTED",
+      "timestamp": 1754314753.276372
+    },
+    {
+      "duration": 0.2002551555633545,
+      "stage": "load_assistants_config",
+      "status": "COMPLETED",
+      "timestamp": 1754314753.476627
+    },
+    {
+      "function_key": "brief_assistant",
+      "order": 1,
+      "stage": "BriefAssistant",
+      "status": "STARTED",
+      "timestamp": 1754314753.476627
+    },
+    {
+      "duration": 48.88065195083618,
+      "function_key": "brief_assistant",
+      "metadata": {},
+      "order": 1,
+      "output": "Jasně, zde je profesionální výzkumný plán vytvořený na základě zadání „test publish script“.\n\n---\n\n### **Shrnutí tématu**\nVytvořit definitivní průvodce pro vývojáře a DevOps inženýry, jak spolehlivě testovat publikační a deployment skripty. V kontextu rostoucí automatizace a komplexnosti CI/CD pipelines v roce 2025 je prevence chyb v deploymentu klíčová pro zajištění dostupnosti služeb a snížení nákladů na opravy.\n\n### **Hlavní výzkumné otázky**\n1.  Jaké jsou nejčastější a nejkritičtější typy chyb v publikačních skriptech (např. v Bash, PowerShell, Python)?\n2.  Jaké jsou moderní strategie a metodologie pro testování deployment skriptů (např. dry-run, testování v izolovaném prostředí, statická analýza)?\n3.  Které konkrétní nástroje a technologie (např. ShellCheck, Pester, Docker, CI/CD platformy) jsou nejefektivnější pro validaci a testování těchto skriptů v roce 2025?\n4.  Jak správně integrovat testování skriptů jako povinný krok do moderních CI/CD pipelines (např. GitHub Actions, GitLab CI)?\n5.  Jaké jsou best-practice postupy pro bezpečné zacházení s citlivými daty (secrets, API klíče, credentials) během testovací fáze deploymentu?\n\n### **Obsahové směry a hypotézy**\n*   **Hypotéza 1:** Testování v plně izolovaném kontejnerovém prostředí (Docker) je výrazně spolehlivější a bezpečnější než pouhé použití `dry-run` flagů, protože simuluje reálné prostředí a závislosti.\n*   **Hypotéza 2:** Využití nástrojů pro statickou analýzu (linting), jako je ShellCheck, dokáže odhalit více než 50 % běžných syntaktických a logických chyb ještě před prvním spuštěním skriptu.\n*   **Hypotéza 3:** Implementace testovacího stage přímo v CI/CD pipeline (např. `test_deployment` job v GitHub Actions) je nejefektivnější způsob, jak vynutit konzistentní testování a předejít nasazení vadného kódu.\n*   **Hypotéza 4:** Nedostatečné testování správy a předávání `secrets` je hlavní příčinou selhání deploymentu v produkčním prostředí, i když v testovacím prostředí skript fungoval.\n\n### **Doporučené Google dotazy**\n*   how to test deployment script before production\n*   best practices for testing shell scripts in ci/cd\n*   github actions test publish script npm\n*   gitlab ci dry run deployment job\n*   test publish script docker container\n*   shellcheck for deployment scripts\n*   idempotent deployment script testing\n*   how to mock api calls in a shell script test\n*   testing npm publish script locally\n*   safely test script with production secrets\n*   python deployment script unit testing\n*   powershell deployment script pester test\n\n### **Speciální poznámky pro asistenty**\n\n*   **Research Assistant:** Zaměř se na konkrétní, kopírovatelné ukázky kódu (Bash, PowerShell) a konfigurační soubory (YAML pro GitHub Actions/GitLab CI). Vyhledej dokumentaci a tutoriály pro nástroje ShellCheck, Pester, a využití Dockeru pro testování. Časové rozpětí: hledej postupy a nástroje relevantní pro roky 2024–2025. Z relevantních značek/institucí se zaměř na GitHub, GitLab, Docker, a komunitní projekty jako `koalaman/shellcheck`.\n*   **Draft Assistant:** Cílová persona je mid-level až senior Developer/DevOps Engineer. Styl musí být technicky přesný, stručný a zaměřený na akci. Předpokládej základní znalost CI/CD, gitu a skriptovacích jazyků. Strukturu textu veď od problému (\"proč testovat\") přes strategie (\"co dělat\") až po praktickou implementaci (\"jak to udělat\"). Používej správně formátované bloky kódu.\n*   **SEO Assistant:** Primární klíčová slova: „test publish script“, „deployment script testing“, „CI/CD script validation“, „github actions dry run“. Cílem je získat featured snippet typu „How-to“ (seznam kroků) a „Code Snippet“. Struktura nadpisů musí být logická a sémanticky čistá pro snadnou indexaci.\n*   **QA Assistant:** Kriticky ověř funkčnost všech ukázek kódu a příkazů. Zkontroluj správnost názvů nástrojů a parametrů. Jakékoli příkazy, které mohou být destruktivní (např. `rm`), musí být opatřeny výrazným varováním a zasazeny do kontextu bezpečného testovacího prostředí (např. uvnitř dočasného Docker kontejneru). Ověř, že doporučení pro práci se `secrets` odpovídají aktuálním bezpečnostním standardům. Cituj oficiální dokumentaci pro klíčové nástroje.\n\n### **Doporučená struktura článku (outline)**\n\n*   **H1: Jak spolehlivě otestovat publikační skript: Průvodce pro rok 2025**\n    *   **H2: Proč slepá důvěra v deployment skript vede ke katastrofě**\n        *   H3: Nejčastější scénáře selhání: Od překlepů po nekonzistentní prostředí\n        *   H3: Reálné náklady neúspěšného deploymentu (downtime, reputace, stres)\n    *   **H2: Klíčové strategie pro neprůstřelné testování skriptů**\n        *   H3: Strategie 1: Statická analýza a linting (Odhalte chyby dříve, než se spustí)\n        *   H3: Strategie 2: Režim „Dry Run“ – dobrý první krok, ale nedostatečný\n        *   H3: Strategie 3: Testování v plné izolaci pomocí kontejnerů (Docker)\n        *   H3: Strategie 4: Idempotence – Návrh skriptů, které lze bezpečně spustit opakovaně\n    *   **H2: Praktická implementace: Nástroje a integrace do CI/CD**\n        *   H3: Validace Bash/Shell skriptů pomocí ShellCheck\n        *   H3: Příklad testování v CI/CD pipeline: GitHub Actions\n        *   H3: Bezpečné zacházení se `secrets` a proměnnými prostředí během testů\n        *   H3: Specifika testování pro různé platformy (npm, PyPI, Docker Hub)\n    *   **H2: Checklist: Je váš publikační skript připraven pro produkci?**\n    *   **H2: Závěr: Testování jako kultura, ne jako povinnost**",
+      "stage": "BriefAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754314802.357279
+    },
+    {
+      "function_key": "research_assistant",
+      "order": 2,
+      "stage": "ResearchAssistant",
+      "status": "STARTED",
+      "timestamp": 1754314802.357279
+    },
+    {
+      "duration": 58.980265855789185,
+      "function_key": "research_assistant",
+      "metadata": {},
+      "order": 2,
+      "output": "Jasně, zde jsou rešeršovaná data k tématu testování publikačních skriptů.\n\n## Náklady\n*   Cena jedné hodiny výpadku kritické infrastruktury přesáhla pro 91 % firem částku 300 000 USD v roce 2021 (2021, ITIC, [https://itic-corp.com/blog/2021/07/2021-hourly-cost-of-downtime-survey-finds-91-of-smes-large-enterprises-say-a-single-hour-of-downtime-costs-300k/](https://itic-corp.com/blog/2021/07/2021-hourly-cost-of-downtime-survey-finds-91-of-smes-large-enterprises-say-a-single-hour-of-downtime-costs-300k/)).\n*   GitHub Actions poskytuje bezplatný balíček (Free plan) pro veřejné repozitáře a 2 000 minut měsíčně pro soukromé repozitáře; placené plány začínají na 4 USD za uživatele/měsíc (plán Team) (2024, GitHub, [https://github.com/pricing](https://github.com/pricing)).\n*   GitLab CI/CD nabízí v rámci bezplatného plánu 400 výpočetních minut měsíčně; placené plány začínají na 29 USD za uživatele/měsíc (plán Premium) (2024, GitLab, [https://about.gitlab.com/pricing/](https://about.gitlab.com/pricing/)).\n*   Docker Desktop vyžaduje placenou subskripci (od 5 USD za uživatele/měsíc) pro komerční využití ve firmách s více než 250 zaměstnanci nebo s ročním obratem nad 10 milionů USD (2024, Docker, [https://www.docker.com/pricing/](https://www.docker.com/pricing/)).\n\n## Statistiky\n*   Podle zprávy State of DevOps 2023 od Google Cloud mají elitní týmy 1460krát vyšší frekvenci nasazování kódu než týmy s nízkým výkonem (2023, Google Cloud, [https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now](https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now)).\n*   Týmy s elitním výkonem mají míru selhání změn (Change Failure Rate) v rozmezí 0–15 %, zatímco týmy s nízkým výkonem vykazují míru selhání 46–60 % (2023, Google Cloud, [https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now](https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now)).\n*   V roce 2023 používalo 90 % respondentů průzkumu od GitLabu nějakou formu CI/CD, což je nárůst oproti 87 % v roce 2022 (2023, GitLab, [https://about.gitlab.com/releases/2023/10/25/global-devsecops-report-reveals-ai-is-the-new-standard/](https://about.gitlab.com/releases/2023/10/25/global-devsecops-report-reveals-ai-is-the-new-standard/)).\n*   Lidská chyba byla v roce 2023 identifikována jako hlavní příčina 46 % všech incidentů se závažností 1 (SEV1) (2024, FireHydrant, [https://firehydrant.com/reports/incident-benchmark-report-2024/](https://firehydrant.com/reports/incident-benchmark-report-2024/)).\n\n## Relevantní firmy a značky\n*   **GitHub:** Poskytovatel platformy pro verzování kódu a CI/CD pipeline prostřednictvím GitHub Actions (2024, GitHub, [https://github.com/](https://github.com/)).\n*   **GitLab:** Poskytovatel kompletní DevOps platformy včetně integrovaného CI/CD (2024, GitLab, [https://about.gitlab.com/](https://about.gitlab.com/)).\n*   **Docker, Inc.:** Společnost stojící za kontejnerizační technologií Docker, klíčovou pro vytváření izolovaných testovacích prostředí (2024, Docker, Inc., [https://www.docker.com/](https://www.docker.com/)).\n*   **Microsoft:** Vývojář PowerShellu a podporovatel testovacího frameworku Pester (2024, Microsoft, [https://learn.microsoft.com/en-us/powershell/](https://learn.microsoft.com/en-us/powershell/)).\n*   **HashiCorp:** Společnost vyvíjející nástroje pro infrastrukturu jako kód (Terraform) a správu citlivých dat (Vault) (2024, HashiCorp, [https://www.hashicorp.com/](https://www.hashicorp.com/)).\n*   **The ShellCheck community (koalaman):** Komunita a hlavní správce (`koalaman`) stojící za vývojem open-source nástroje ShellCheck pro statickou analýzu shell skriptů (2024, GitHub, [https://github.com/koalaman/shellcheck](https://github.com/koalaman/shellcheck)).\n\n## Legislativa a regulace\n*   Data nebyla nalezena.\n\n## Ekologický dopad a zdraví\n*   Data nebyla nalezena.\n\n## Technologie a inovace\n*   **Statická analýza:** Nástroj ShellCheck dokáže identifikovat běžné syntaktické a sémantické problémy v shell skriptech, jako je nesprávné uvozovkování proměnných nebo použití nebezpečných příkazů (2024, ShellCheck Wiki, [https://github.com/koalaman/shellcheck/wiki](https://github.com/koalaman/shellcheck/wiki)).\n*   **Testovací frameworky:** Pester je testovací a mockovací framework pro PowerShell, který umožňuje psát unit a integrační testy pro skripty (2024, Pester, [https://pester.dev/](https://pester.dev/)).\n*   **Režim Dry Run:** Mnoho nástrojů pro nasazení podporuje \"dry run\" režim, který simuluje provedení změn bez jejich skutečné aplikace. Příkladem je `kubectl apply --dry-run=server` (2024, Kubernetes Documentation, [https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#apply](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#apply)) nebo `npm publish --dry-run` (2024, npm Docs, [https://docs.npmjs.com/cli/v10/commands/npm-publish](https://docs.npmjs.com/cli/v10/commands/npm-publish)).\n*   **Izolovaná prostředí:** Docker kontejnery umožňují vytvořit dočasné, izolované prostředí, které přesně odpovídá produkčnímu systému, pro bezpečné testování deployment skriptů (2024, Docker Documentation, [https://docs.docker.com/get-started/](https://docs.docker.com/get-started/)).\n*   **Idempotence:** Idempotentní skript je takový, který při opakovaném spuštění se stejnými vstupními parametry produkuje vždy stejný výsledek, což je klíčové pro spolehlivost a obnovitelnost deploymentu (2022, Red Hat, [https://www.redhat.com/en/blog/introduction-ansible-idempotency](https://www.redhat.com/en/blog/introduction-ansible-idempotency)).\n*   **Správa citlivých dat (Secrets):** GitHub Actions umožňuje bezpečné uložení citlivých dat jako šifrovaných `secrets`, které jsou dostupné pouze pro konkrétní workflow a nejsou logovány (2024, GitHub Docs, [https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions)).\n*   **Správa citlivých dat (Secrets):** GitLab CI/CD poskytuje `CI/CD variables`, které mohou být označeny jako \"protected\" (dostupné jen v chráněných větvích) a \"masked\" (skryté v logu) pro bezpečné předávání citlivých informací (2024, GitLab Docs, [https://docs.gitlab.com/ee/ci/variables/](https://docs.gitlab.com/ee/ci/variables/)).\n\n## Využití a efektivita\n*   **ShellCheck v CI/CD:** ShellCheck lze integrovat do CI/CD pipeline jako krok, který automaticky selže, pokud skript obsahuje chyby, a tím zabrání nasazení vadného kódu (2024, GitHub Marketplace, [https://github.com/marketplace/actions/run-shellcheck](https://github.com/marketplace/actions/run-shellcheck)).\n*   **Testování v Dockeru:** Typický scénář zahrnuje vytvoření `Dockerfile`, který nastaví testovací prostředí, zkopíruje do něj deployment skript, spustí ho a poté provede testy (např. pomocí `curl` nebo `grep`) k ověření, že služba běží správně (2023, The Testcontainers Blog, [https://blog.testcontainers.org/generic-container-and-the-power-of-scripting/](https://blog.testcontainers.org/generic-container-and-the-power-of-scripting/)).\n*   **Mockování v Bash:** Pro testování shell skriptů, které interagují s externími příkazy, lze použít nástroje jako `mockery`, který umožňuje vytvářet falešné verze těchto příkazů a definovat jejich chování (2024, GitHub - mockery, [https://github.com/upfluence/mockery](https://github.com/upfluence/mockery)).\n*   **Příklad integrace (GitHub Actions):** YAML konfigurace pro GitHub Actions může obsahovat `job`, který nejprve spustí `ludeeus/action-shellcheck@master` pro statickou analýzu a poté v dalším kroku spustí samotný skript v izolovaném kontejneru (2024, GitHub Docs, [https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)).\n\n## Dovednosti a údržba\n*   **Požadované dovednosti:** Efektivní testování deployment skriptů vyžaduje znalosti skriptovacích jazyků (Bash, PowerShell, Python), technologií pro kontejnerizaci (Docker), syntaxe pro CI/CD platformy (YAML) a základních principů testování softwaru (2024, Coursera, [https://www.coursera.org/articles/devops-skills](https://www.coursera.org/articles/devops-skills)).\n*   **Údržba testovacího prostředí:** Je nutné pravidelně aktualizovat testovací prostředí (např. verze základního obrazu Dockeru, verze závislostí), aby se předešlo \"environment drift\" – stavu, kdy se testovací prostředí liší od produkčního, což snižuje relevanci testů (2020, Martin Fowler, [https://martinfowler.com/bliki/PhoenixServer.html](https://martinfowler.com/bliki/PhoenixServer.html)).\n\n## Trendy a vývoj trhu\n*   **GitOps:** Roste popularita přístupu GitOps, kde je repozitář Git jediným zdrojem pravdy pro definici a provoz systému. To zvyšuje důležitost testování skriptů a konfigurací před jejich sloučením do hlavní větve (2024, OpenGitOps, [https://opengitops.dev/](https://opengitops.dev/)).\n*   **DevSecOps:** Důraz na integraci bezpečnosti do celého životního cyklu vývoje (DevSecOps) zahrnuje i bezpečné testování deployment skriptů, včetně skenování na zranitelnosti a ověřování správy citlivých dat (2024, Gartner, [https://www.gartner.com/en/information-technology/glossary/devsecops](https://www.gartner.com/en/information-technology/glossary/devsecops)).\n*   **Platform Engineering:** Trend budování interních vývojářských platforem (IDP) vede k vytváření standardizovaných a předem otestovaných šablon pro deployment, které vývojáři mohou opakovaně používat, čímž se snižuje riziko chyb v individuálních skriptech (2024, Platform Engineering Community, [https://platformengineering.org/](https://platformengineering.org/)).",
+      "stage": "ResearchAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754314861.337545
+    },
+    {
+      "function_key": "fact_validator_assistant",
+      "order": 3,
+      "stage": "FactValidatorAssistant",
+      "status": "STARTED",
+      "timestamp": 1754314861.337545
+    },
+    {
+      "duration": 58.68910503387451,
+      "function_key": "fact_validator_assistant",
+      "metadata": {},
+      "order": 3,
+      "output": "```json\n[\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Cena jedné hodiny výpadku kritické infrastruktury přesáhla pro 91 % firem částku 300 000 USD v roce 2021 (2021, ITIC, https://itic-corp.com/blog/2021/07/2021-hourly-cost-of-downtime-survey-finds-91-of-smes-large-enterprises-say-a-single-hour-of-downtime-costs-300k/).\",\n    \"suggested_fix\": \"Najděte novější studii o nákladech na výpadek, ideálně z let 2024-2025.\",\n    \"justification\": \"Data z roku 2021 jsou v kontextu roku 2025 zastaralá. Náklady se pravděpodobně změnily vlivem inflace a rostoucí závislosti na IT. Pro aktuálnost je třeba novější zdroj.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Podle zprávy State of DevOps 2023 od Google Cloud mají elitní týmy 1460krát vyšší frekvenci nasazování kódu než týmy s nízkým výkonem (2023, Google Cloud, https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now).\",\n    \"suggested_fix\": \"Ověřte dostupnost zprávy DORA za rok 2024 (nebo 2025, pokud již vyšla) a aktualizujte data.\",\n    \"justification\": \"Zpráva DORA vychází každoročně. V srpnu 2025 je verze z roku 2023 již dva roky stará a existuje novější verze (minimálně za rok 2024), která poskytne aktuálnější pohled na trendy ve výkonnosti DevOps týmů.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Týmy s elitním výkonem mají míru selhání změn (Change Failure Rate) v rozmezí 0–15 %, zatímco týmy s nízkým výkonem vykazují míru selhání 46–60 % (2023, Google Cloud, https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now).\",\n    \"suggested_fix\": \"Ověřte dostupnost zprávy DORA za rok 2024 (nebo 2025, pokud již vyšla) a aktualizujte data.\",\n    \"justification\": \"Stejně jako u předchozího bodu, data pocházejí ze zprávy DORA 2023. Pro zachování aktuálnosti je nutné použít data z nejnovější dostupné verze této výroční zprávy.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"V roce 2023 používalo 90 % respondentů průzkumu od GitLabu nějakou formu CI/CD, což je nárůst oproti 87 % v roce 2022 (2023, GitLab, https://about.gitlab.com/releases/2023/10/25/global-devsecops-report-reveals-ai-is-the-new-standard/).\",\n    \"suggested_fix\": \"Najděte novější verzi průzkumu GitLab Global DevSecOps Report (pravděpodobně za rok 2024 nebo 2025) a aktualizujte statistiku.\",\n    \"justification\": \"Jedná se o data z výročního průzkumu z roku 2023. V srpnu 2025 budou k dispozici novější data, která lépe odrážejí aktuální míru adopce CI/CD.\"\n  },\n  {\n    \"issue_type\": \"misleading\",\n    \"example_text\": \"Příklad integrace (GitHub Actions): YAML konfigurace pro GitHub Actions může obsahovat `job`, který nejprve spustí `ludeeus/action-shellcheck@master` pro statickou analýzu a poté v dalším kroku spustí samotný skript v izolovaném kontejneru (2024, GitHub Docs, https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions).\",\n    \"suggested_fix\": \"Nahraďte odkaz `@master` konkrétní, stabilní verzí (např. `@v2` nebo pomocí plného hashe), aby příklad odpovídal osvědčeným postupům.\",\n    \"justification\": \"Použití reference `@master` v GitHub Actions je považováno za špatnou praxi, protože může vést k neočekávaným změnám a selhání CI/CD pipeline. Příklad by měl demonstrovat bezpečný a reprodukovatelný přístup s použitím pevné verze.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Údržba testovacího prostředí: Je nutné pravidelně aktualizovat testovací prostředí (např. verze základního obrazu Dockeru, verze závislostí), aby se předešlo \\\"environment drift\\\" – stavu, kdy se testovací prostředí liší od produkčního, což snižuje relevanci testů (2020, Martin Fowler, https://martinfowler.com/bliki/PhoenixServer.html).\",\n    \"suggested_fix\": \"Doplňte novější zdroj (2023+) potvrzující přetrvávající relevanci konceptu 'PhoenixServer' nebo 'immutable infrastructure' v kontextu moderních platforem.\",\n    \"justification\": \"Ačkoliv je koncept nadčasový a Martin Fowler je autorita, zdroj z roku 2020 je pro téma rychle se vyvíjejících technologií starý. Odkaz na novější článek nebo dokumentaci potvrdí, že princip je stále klíčový i v roce 2025.\"\n  }\n]\n```",
+      "stage": "FactValidatorAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754314920.02665
+    },
+    {
+      "function_key": "draft_assistant",
+      "order": 4,
+      "stage": "DraftAssistant",
+      "status": "STARTED",
+      "timestamp": 1754314920.02665
+    },
+    {
+      "duration": 0.0,
+      "function_key": "draft_assistant",
+      "metadata": {},
+      "order": 4,
+      "output": "```json\n[\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Cena jedné hodiny výpadku kritické infrastruktury přesáhla pro 91 % firem částku 300 000 USD v roce 2021 (2021, ITIC, https://itic-corp.com/blog/2021/07/2021-hourly-cost-of-downtime-survey-finds-91-of-smes-large-enterprises-say-a-single-hour-of-downtime-costs-300k/).\",\n    \"suggested_fix\": \"Najděte novější studii o nákladech na výpadek, ideálně z let 2024-2025.\",\n    \"justification\": \"Data z roku 2021 jsou v kontextu roku 2025 zastaralá. Náklady se pravděpodobně změnily vlivem inflace a rostoucí závislosti na IT. Pro aktuálnost je třeba novější zdroj.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Podle zprávy State of DevOps 2023 od Google Cloud mají elitní týmy 1460krát vyšší frekvenci nasazování kódu než týmy s nízkým výkonem (2023, Google Cloud, https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now).\",\n    \"suggested_fix\": \"Ověřte dostupnost zprávy DORA za rok 2024 (nebo 2025, pokud již vyšla) a aktualizujte data.\",\n    \"justification\": \"Zpráva DORA vychází každoročně. V srpnu 2025 je verze z roku 2023 již dva roky stará a existuje novější verze (minimálně za rok 2024), která poskytne aktuálnější pohled na trendy ve výkonnosti DevOps týmů.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Týmy s elitním výkonem mají míru selhání změn (Change Failure Rate) v rozmezí 0–15 %, zatímco týmy s nízkým výkonem vykazují míru selhání 46–60 % (2023, Google Cloud, https://cloud.google.com/blog/products/devops-sre/dora-2023-report-out-now).\",\n    \"suggested_fix\": \"Ověřte dostupnost zprávy DORA za rok 2024 (nebo 2025, pokud již vyšla) a aktualizujte data.\",\n    \"justification\": \"Stejně jako u předchozího bodu, data pocházejí ze zprávy DORA 2023. Pro zachování aktuálnosti je nutné použít data z nejnovější dostupné verze této výroční zprávy.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"V roce 2023 používalo 90 % respondentů průzkumu od GitLabu nějakou formu CI/CD, což je nárůst oproti 87 % v roce 2022 (2023, GitLab, https://about.gitlab.com/releases/2023/10/25/global-devsecops-report-reveals-ai-is-the-new-standard/).\",\n    \"suggested_fix\": \"Najděte novější verzi průzkumu GitLab Global DevSecOps Report (pravděpodobně za rok 2024 nebo 2025) a aktualizujte statistiku.\",\n    \"justification\": \"Jedná se o data z výročního průzkumu z roku 2023. V srpnu 2025 budou k dispozici novější data, která lépe odrážejí aktuální míru adopce CI/CD.\"\n  },\n  {\n    \"issue_type\": \"misleading\",\n    \"example_text\": \"Příklad integrace (GitHub Actions): YAML konfigurace pro GitHub Actions může obsahovat `job`, který nejprve spustí `ludeeus/action-shellcheck@master` pro statickou analýzu a poté v dalším kroku spustí samotný skript v izolovaném kontejneru (2024, GitHub Docs, https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions).\",\n    \"suggested_fix\": \"Nahraďte odkaz `@master` konkrétní, stabilní verzí (např. `@v2` nebo pomocí plného hashe), aby příklad odpovídal osvědčeným postupům.\",\n    \"justification\": \"Použití reference `@master` v GitHub Actions je považováno za špatnou praxi, protože může vést k neočekávaným změnám a selhání CI/CD pipeline. Příklad by měl demonstrovat bezpečný a reprodukovatelný přístup s použitím pevné verze.\"\n  },\n  {\n    \"issue_type\": \"outdated\",\n    \"example_text\": \"Údržba testovacího prostředí: Je nutné pravidelně aktualizovat testovací prostředí (např. verze základního obrazu Dockeru, verze závislostí), aby se předešlo \\\"environment drift\\\" – stavu, kdy se testovací prostředí liší od produkčního, což snižuje relevanci testů (2020, Martin Fowler, https://martinfowler.com/bliki/PhoenixServer.html).\",\n    \"suggested_fix\": \"Doplňte novější zdroj (2023+) potvrzující přetrvávající relevanci konceptu 'PhoenixServer' nebo 'immutable infrastructure' v kontextu moderních platforem.\",\n    \"justification\": \"Ačkoliv je koncept nadčasový a Martin Fowler je autorita, zdroj z roku 2020 je pro téma rychle se vyvíjejících technologií starý. Odkaz na novější článek nebo dokumentaci potvrdí, že princip je stále klíčový i v roce 2025.\"\n  }\n]\n```",
+      "stage": "DraftAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754314920.02665
+    },
+    {
+      "function_key": "humanizer_assistant",
+      "order": 5,
+      "stage": "HumanizerAssistant",
+      "status": "STARTED",
+      "timestamp": 1754314920.02665
+    },
+    {
+      "duration": 81.32486605644226,
+      "function_key": "humanizer_assistant",
+      "metadata": {},
+      "order": 5,
+      "output": "# Kontinuální integrace a kontinuální nasazování (CI/CD): Kompletní průvodce moderními praktikami\n\nKontinuální integrace a kontinuální nasazování představují páteř moderního softwarového vývoje. Tyto metodiky umožňují vývojářským týmům rychle a spolehlivě dodávat kvalitní software, zatímco minimalizují rizika spojená s častými změnami kódu.\n\n## Co je kontinuální integrace (CI)\n\nKontinuální integrace spočívá v pravidelném začleňování změn kódu od více vývojářů do společného repozitáře. Každá změna automaticky spouští sérii testů, které ověřují, zda nový kód nenarušuje existující funkcionalnost.\n\n### Klíčové principy kontinuální integrace\n\n**Časté začleňování kódu** znamená, že vývojáři integrují své změny minimálně jednou denně, ideálně několikrát za den. Tento přístup snižuje riziko konfliktů mezi různými částmi kódu a usnadňuje identifikaci problémů.\n\n**Automatizované testování** zajišťuje, že každá změna prochází sadou testů bez lidského zásahu. Systém okamžitě informuje tým o případných selháních, což umožňuje rychlou opravu chyb.\n\n**Rychlá zpětná vazba** poskytuje vývojářům informace o stavu jejich kódu během několika minut. Pokud test selže, autor změny může problém vyřešit, zatímco má kontext ještě čerstvě v paměti.\n\n### Výhody kontinuální integrace\n\nImplementace CI přináší týmům řadu konkrétních benefitů. Snížení počtu chyb v produkci nastává díky důslednému testování každé změny před jejím začleněním do hlavní větve kódu.\n\nRychlejší identifikace problémů umožňuje týmům řešit chyby v okamžiku jejich vzniku, nikoli až po týdnech vývoje. Zlepšení spolupráce v týmu přichází díky sdílenému repozitáři a transparentnímu procesu integrace.\n\nZvýšení kvality kódu je výsledkem konzistentního dodržování standardů a automatických kontrol. Snížení času potřebného na manuální testování uvolňuje zdroje pro kreativnější aspekty vývoje.\n\n## Co je kontinuální nasazování (CD)\n\nKontinuální nasazování rozšiřuje principy CI o automatické nasazení ověřeného kódu do produkčního prostředí. Existují dvě hlavní varianty: kontinuální dodávka (Continuous Delivery) a kontinuální nasazování (Continuous Deployment).\n\n### Kontinuální dodávka vs. kontinuální nasazování\n\n**Kontinuální dodávka** zajišťuje, že kód je vždy připraven k nasazení, ale samotné nasazení do produkce vyžaduje manuální schválení. Tento přístup poskytuje kontrolu nad tím, kdy se změny dostanou k uživatelům.\n\n**Kontinuální nasazování** automatizuje celý proces až do produkce. Každá změna, která projde všemi testy, se automaticky nasadí bez lidského zásahu. Tento model vyžaduje mimořádně spolehlivé testování a monitoring.\n\n### Výhody kontinuálního nasazování\n\nRychlejší dodávka funkcí uživatelům zkracuje čas od nápadu po jeho realizaci. Snížení rizika velkých nasazení nastává díky častým, menším změnám, které jsou snáze kontrolovatelné a v případě problémů rychleji vratné.\n\nLepší reakce na zpětnou vazbu od uživatelů umožňuje týmům rychle iterovat na základě reálných potřeb. Zvýšení produktivity týmu přichází díky eliminaci manuálních, opakujících se úkolů.\n\n## Nástroje pro CI/CD\n\nModerní ekosystém nabízí širokou škálu nástrojů pro implementaci CI/CD pipeline. Volba správného nástroje závisí na specifických potřebách projektu, velikosti týmu a technologickém stacku.\n\n### Cloudové platformy\n\n**GitHub Actions** integruje CI/CD přímo do GitHub repozitářů. Nabízí širokou škálu předpřipravených akcí a umožňuje spouštění workflow na různých operačních systémech.\n\n**GitLab CI/CD** poskytuje kompletní DevOps platformu s integrovaným CI/CD. Podporuje Docker kontejnery a nabízí pokročilé funkce jako Auto DevOps.\n\n**Azure DevOps** od Microsoftu kombinuje správu kódu, CI/CD pipeline a projektové řízení v jedné platformě. Dobře se integruje s Microsoft ekosystémem.\n\n**AWS CodePipeline** a **Google Cloud Build** představují nativní cloudová řešení pro své respective platformy, optimalizovaná pro nasazení do příslušných cloudových služeb.\n\n### Self-hosted řešení\n\n**Jenkins** zůstává jedním z nejpopulárnějších open-source nástrojů pro CI/CD. Nabízí obrovské množství pluginů a flexibilní konfiguraci, ale vyžaduje více údržby.\n\n**TeamCity** od JetBrains poskytuje výkonné funkce pro komplexní projekty s pokročilým reportingem a analýzou.\n\n**Bamboo** od Atlassian se dobře integruje s ostatními Atlassian nástroji jako Jira a Confluence.\n\n## Implementace CI/CD pipeline\n\nÚspěšná implementace CI/CD vyžaduje pečlivé plánování a postupné zavádění. Proces začíná analýzou současného stavu a definicí cílů.\n\n### Fáze implementace\n\n**Přípravná fáze** zahrnuje audit současných procesů, identifikaci bottlenecků a definici metrík úspěchu. Týmy musí také určit, které části aplikace jsou kritické a vyžadují zvláštní pozornost.\n\n**Návrh pipeline** specifikuje jednotlivé kroky od commitování kódu po nasazení do produkce. Důležité je definovat, jaké testy se budou spouštět v každé fázi a jaké jsou kritéria pro postup do další fáze.\n\n**Implementace základní CI** začíná obvykle automatizací buildování a spouštění unit testů. Tato fáze vytváří základ pro pokročilejší funkce.\n\n**Rozšíření o CD** přidává automatické nasazování do testovacích prostředí a postupně i do produkce. Klíčové je zajistit možnost rychlého rollbacku v případě problémů.\n\n### Best practices pro pipeline\n\n**Udržujte pipeline rychlou** – celý proces by měl trvat maximálně 10-15 minut pro základní feedback loop. Dlouhé pipeline odrazují od častého commitování.\n\n**Paralelizujte kde je to možné** – nezávislé testy můžou běžet současně, což zkracuje celkový čas pipeline.\n\n**Používejte konzistentní prostředí** – Docker kontejnery zajišťují, že kód běží stejně v development, testing i production prostředí.\n\n**Implementujte postupné nasazování** – blue-green deployment nebo canary releases minimalizují riziko výpadků.\n\n## Testování v CI/CD\n\nAutomatizované testování tvoří srdce každé úspěšné CI/CD pipeline. Bez spolehlivých testů nemůže tým důvěřovat automatickému nasazování.\n\n### Pyramid testování\n\n**Unit testy** tvoří základ pyramidy. Jsou rychlé, izolované a testují jednotlivé komponenty kódu. Měly by pokrývat většinu business logiky aplikace.\n\n**Integrační testy** ověřují, že různé části systému správně spolupracují. Testují databázové operace, API volání a komunikaci mezi službami.\n\n**End-to-end testy** simulují reálné uživatelské scénáře. Jsou nejpomalejší a nejkřehčí, proto by jich mělo být minimum, ale měly by pokrývat kritické business procesy.\n\n### Strategie testování\n\n**Fail fast princip** znamená, že nejrychlejší testy běží první. Pokud selžou unit testy, pipeline se zastaví bez spouštění pomalejších testů.\n\n**Test parallelization** umožňuje spouštět testy současně na více strojích nebo kontejnerech, což výrazně zkracuje celkový čas.\n\n**Flaky test management** řeší problém nestabilních testů, které někdy projdou a někdy ne. Tyto testy musí být identifikovány a opraveny, protože podkopávají důvěru v celý systém.\n\n## Monitoring a metriky\n\nÚspěšná CI/CD implementace vyžaduje měření a kontinuální zlepšování. Klíčové metriky pomáhají týmům identifikovat oblasti pro optimalizaci.\n\n### DORA metriky\n\n**Deployment Frequency** měří, jak často tým nasazuje kód do produkce. Podle zprávy State of DevOps 2023 od Google Cloud mají elitní týmy 1460krát vyšší frekvenci nasazování kódu než týmy s nízkým výkonem [1].\n\n**Lead Time for Changes** sleduje čas od commitu po nasazení do produkce. Elitní týmy dosahují lead time méně než hodinu, zatímco týmy s nízkým výkonem potřebují měsíce.\n\n**Change Failure Rate** ukazuje procento nasazení, která způsobí selhání v produkci. Týmy s elitním výkonem mají míru selhání změn (Change Failure Rate) v rozmezí 0–15 %, zatímco týmy s nízkým výkonem vykazují míru selhání 46–60 % [2].\n\n**Time to Restore Service** měří, jak rychle tým dokáže obnovit službu po výpadku. Rychlá obnova je často důležitější než prevence všech chyb.\n\n### Další důležité metriky\n\n**Pipeline success rate** sleduje procento úspěšných spuštění CI/CD pipeline. Nízká úspěšnost může indikovat problémy s nestabilními testy nebo infrastrukturou.\n\n**Test coverage** měří, kolik procent kódu pokrývají automatizované testy. Vysoké pokrytí není zárukou kvality, ale nízké pokrytí obvykle signalizuje riziko.\n\n**Build time trends** pomáhají identifikovat, zda se pipeline nezpomaluje v čase. Rostoucí časy buildů mohou odrazovat od častého commitování.\n\n## Bezpečnost v CI/CD\n\nIntegrace bezpečnostních praktik do CI/CD pipeline je kritická pro moderní vývoj software. Tento přístup, známý jako DevSecOps, zajišťuje, že bezpečnost není dodatečnou myšlenkou, ale integrální součástí vývojového procesu.\n\n### Bezpečnostní skenování\n\n**Static Application Security Testing (SAST)** analyzuje zdrojový kód bez jeho spuštění a hledá známé bezpečnostní vzory. Nástroje jako SonarQube nebo Checkmarx mohou identifikovat potenciální zranitelnosti již ve fázi vývoje.\n\n**Dynamic Application Security Testing (DAST)** testuje běžící aplikaci z vnější perspektivy, podobně jako by to dělal útočník. Tyto testy odhalují runtime zranitelnosti, které statická analýza nemůže zachytit.\n\n**Dependency scanning** kontroluje použité knihovny a závislosti na známé bezpečnostní chyby. Nástroje jako OWASP Dependency Check nebo Snyk automaticky identifikují zastaralé komponenty s bezpečnostními problémy.\n\n### Správa secrets\n\n**Nikdy neukládejte citlivé údaje v kódu** – API klíče, hesla a certifikáty musí být uloženy v specializovaných nástrojích jako HashiCorp Vault, AWS Secrets Manager nebo Azure Key Vault.\n\n**Rotace přístupových údajů** by měla být automatizovaná a pravidelná. Dlouhodobé použití stejných credentials zvyšuje riziko kompromitace.\n\n**Principle of least privilege** zajišťuje, že každá komponenta pipeline má pouze minimální oprávnění nutná pro svou funkci.\n\n## Řešení běžných problémů\n\nImplementace CI/CD přináší specifické výzvy, které musí týmy překonat pro dosažení úspěchu.\n\n### Flaky testy\n\nNestabilní testy představují jednu z největších překážek úspěšné CI/CD. Tyto testy někdy projdou a někdy selžou bez zjevného důvodu.\n\n**Identifikace** flaky testů vyžaduje systematické sledování výsledků testů v čase. Testy s úspěšností pod 95% by měly být označeny jako nestabilní.\n\n**Izolace testů** zajišťuje, že každý test běží nezávisle na ostatních. Sdílený stav mezi testy je častou příčinou nestability.\n\n**Deterministické testování** eliminuje závislost na externích faktorech jako čas, náhodná data nebo síťové volání. Mock objekty a test doubles pomáhají vytvořit kontrolované prostředí.\n\n### Pomalé pipeline\n\nDlouhé CI/CD pipeline odrazují vývojáře od častého commitování a snižují efektivitu týmu.\n\n**Profilování pipeline** identifikuje nejpomalejší kroky. Často se jedná o kompilaci, testování databáze nebo deployment do cloudových služeb.\n\n**Paralelizace** umožňuje spouštět nezávislé úlohy současně. Moderní CI/CD platformy podporují maticové buildy a distribuované testování.\n\n**Caching** urychluje opakované operace. Cache pro závislosti, kompilované artefakty a Docker vrstvy může výrazně zkrátit časy buildů.\n\n**Optimalizace testů** zahrnuje odstranění redundantních testů, zlepšení test data management a použití rychlejších testovacích frameworků.\n\n### Správa prostředí\n\nKonzistence mezi development, testing a production prostředími je klíčová pro spolehlivé nasazování.\n\n**Infrastructure as Code** definuje infrastrukturu pomocí verzovaných skriptů. Nástroje jako Terraform nebo AWS CloudFormation zajišťují reprodukovatelné prostředí.\n\n**Kontejnerizace** pomocí Docker eliminuje problémy typu \"funguje to na mém počítači\". Aplikace běží ve stejném prostředí od vývoje po produkci.\n\n**Environment parity** minimalizuje rozdíly mezi prostředími. Stejné verze databází, runtime prostředí a konfigurací snižují riziko neočekávaných problémů.\n\n## Pokročilé techniky\n\nZkušené týmy využívají sofistikované přístupy pro maximalizaci benefitů CI/CD.\n\n### Feature flags\n\nFeature flags umožňují oddělení nasazení kódu od aktivace funkcí. Nové funkce lze nasadit do produkce, ale aktivovat je pouze pro určité uživatele nebo v určitých podmínkách.\n\n**Postupné rollout** snižuje riziko problémových funkcí. Nová",
+      "stage": "HumanizerAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754315001.351516
+    },
+    {
+      "function_key": "seo_assistant",
+      "order": 6,
+      "stage": "SEOAssistant",
+      "status": "STARTED",
+      "timestamp": 1754315001.351516
+    },
+    {
+      "duration": 8.816554069519043,
+      "function_key": "seo_assistant",
+      "metadata": {},
+      "order": 6,
+      "output": "1. 🏷️ SEO Metadata\n```plaintext\ntitle: Průvodce CI/CD: Moderní Praktiky Softwarového Vývoje\nmeta_description: Zjistěte, jak CI/CD zrychluje vývoj, snižuje chyby a zlepšuje kvalitu softwaru. Naučte se implementovat efektivní CI/CD pipeline.\nslug: pruvodce-ci-cd-moderni-praktiky\n```\n\n2. 🧱 Nadpisy a Struktura\n```markdown\n# Průvodce CI/CD: Moderní Praktiky Softwarového Vývoje\n\n## Co je kontinuální integrace (CI)\n\n### Klíčové principy kontinuální integrace\n\n### Výhody kontinuální integrace\n\n## Co je kontinuální nasazování (CD)\n\n### Kontinuální dodávka vs. kontinuální nasazování\n\n### Výhody kontinuálního nasazování\n\n## Nástroje pro CI/CD\n\n### Cloudové platformy\n\n### Self-hosted řešení\n\n## Implementace CI/CD pipeline\n\n### Fáze implementace\n\n### Best practices pro pipeline\n\n## Testování v CI/CD\n\n### Pyramid testování\n\n### Strategie testování\n\n## Monitoring a metriky\n\n### DORA metriky\n\n### Další důležité metriky\n\n## Bezpečnost v CI/CD\n\n### Bezpečnostní skenování\n\n### Správa secrets\n\n## Řešení běžných problémů\n\n### Flaky testy\n\n### Pomalé pipeline\n\n### Správa prostředí\n\n## Pokročilé techniky\n\n### Feature flags\n```\n\n3. 🔑 Klíčová slova\n- kontinuální integrace\n- CI/CD pipeline\n- automatizované testování\n- DevOps nástroje\n- GitHub Actions\n- GitLab CI/CD\n- Jenkins\n- bezpečnost v DevSecOps\n- DORA metriky\n- feature flags\n\n4. 🔗 Interní odkazy\n- [Výhody automatizace v DevOps](https://example.com/vyhody-automatizace-v-devops)\n- [Jak vybrat správný DevOps nástroj](https://example.com/jak-vybrat-devops-nastroj)\n- [Základy bezpečnosti v softwarovém vývoji](https://example.com/zaklady-bezpecnosti-ve-vyvoji)\n\n5. 🌍 Externí odkazy\n- [State of DevOps Report 2023](https://cloud.google.com/devops/state-of-devops)\n- [OWASP Dependency Check](https://owasp.org/www-project-dependency-check/)\n- [Terraform by HashiCorp](https://www.terraform.io/)\n\n6. 🧩 Schema.org markup (JSON-LD)\n```json\n{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Article\",\n  \"headline\": \"Průvodce CI/CD: Moderní Praktiky Softwarového Vývoje\",\n  \"author\": \"SEO Farm Orchestrator\",\n  \"datePublished\": \"2025-08-04\",\n  \"image\": \"https://example.com/image.jpg\",\n  \"articleBody\": \"Zjistěte, jak CI/CD zrychluje vývoj, snižuje chyby a zlepšuje kvalitu softwaru. Naučte se implementovat efektivní CI/CD pipeline.\"\n}\n```",
+      "stage": "SEOAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754315010.16807
+    },
+    {
+      "function_key": "multimedia_assistant",
+      "order": 7,
+      "stage": "MultimediaAssistant",
+      "status": "STARTED",
+      "timestamp": 1754315010.16807
+    },
+    {
+      "duration": 12.786728858947754,
+      "function_key": "multimedia_assistant",
+      "metadata": {},
+      "order": 7,
+      "output": "```json\n{\n  \"primary_visuals\": [\n    {\n      \"position\": \"úvod článku\",\n      \"type\": \"infographic\",\n      \"image_prompt\": \"A detailed infographic illustrating the CI/CD process, showing the flow from Continuous Integration (CI) to Continuous Deployment (CD), including key stages like code integration, automated testing, and deployment. Include icons for popular tools like Jenkins, GitHub Actions, and GitLab CI/CD. Style: flat illustration, colors: blue, green, and orange, aspect ratio: 9:16.\",\n      \"description\": \"Infografika znázorňuje proces CI/CD, včetně klíčových fází a nástrojů, což pomáhá čtenářům pochopit, jak CI/CD pipeline funguje.\",\n      \"alt_text\": \"Infografika zobrazující proces CI/CD od integrace po nasazení s ikonami nástrojů jako Jenkins a GitHub Actions.\"\n    },\n    {\n      \"position\": \"sekce Implementace CI/CD pipeline\",\n      \"type\": \"chart\",\n      \"image_prompt\": \"A vector chart showing the stages of implementing a CI/CD pipeline: planning, development, testing, deployment, and monitoring. Include labels for each stage and highlight best practices. Style: vector chart, colors: teal and grey, aspect ratio: 3:2.\",\n      \"description\": \"Graf znázorňuje jednotlivé fáze implementace CI/CD pipeline, což čtenářům pomáhá pochopit proces krok za krokem.\",\n      \"alt_text\": \"Graf s fázemi implementace CI/CD pipeline, včetně plánování, testování a nasazení.\"\n    }\n  ],\n  \"optional_visuals\": [\n    {\n      \"position\": \"sekce Nástroje pro CI/CD\",\n      \"type\": \"interactive\",\n      \"image_prompt\": null,\n      \"description\": \"Interaktivní seznam nástrojů pro CI/CD, kde uživatelé mohou prozkoumávat různé platformy jako GitHub Actions, GitLab CI/CD a Jenkins, včetně jejich hlavních funkcí a výhod.\",\n      \"alt_text\": \"Interaktivní seznam nástrojů CI/CD pro prozkoumání funkcí a výhod.\"\n    },\n    {\n      \"position\": \"sekce Testování v CI/CD\",\n      \"type\": \"infographic\",\n      \"image_prompt\": \"An infographic illustrating the testing pyramid in CI/CD, showing unit tests at the base, integration tests in the middle, and end-to-end tests at the top. Include descriptions and examples for each test type. Style: flat illustration, colors: pastel shades, aspect ratio: 3:2.\",\n      \"description\": \"Infografika znázorňuje pyramid testování v CI/CD, což pomáhá čtenářům pochopit různé úrovně testování.\",\n      \"alt_text\": \"Infografika pyramidy testování v CI/CD s jednotkovými, integračními a end-to-end testy.\"\n    }\n  ]\n}\n```",
+      "stage": "MultimediaAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754315022.954799
+    },
+    {
+      "function_key": "qa_assistant",
+      "order": 8,
+      "stage": "QAAssistant",
+      "status": "STARTED",
+      "timestamp": 1754315022.954799
+    },
+    {
+      "duration": 10.33989405632019,
+      "function_key": "qa_assistant",
+      "metadata": {},
+      "order": 8,
+      "output": "{\n  \"faq\": [\n    {\n      \"question\": \"Co je kontinuální integrace (CI) a jaké jsou její klíčové principy?\",\n      \"answer\": \"Kontinuální integrace (CI) je metodika, která zahrnuje pravidelné začleňování změn kódu do společného repozitáře. Klíčové principy zahrnují časté začleňování kódu, automatizované testování a rychlou zpětnou vazbu, což pomáhá snižovat riziko konfliktů a rychleji identifikovat problémy.\"\n    },\n    {\n      \"question\": \"Jaký je rozdíl mezi kontinuální dodávkou a kontinuálním nasazováním?\",\n      \"answer\": \"Kontinuální dodávka zajišťuje, že kód je připraven k nasazení, ale vyžaduje manuální schválení. Kontinuální nasazování automatizuje celý proces až do produkce, takže kód se nasadí automaticky, pokud projde všemi testy.\"\n    },\n    {\n      \"question\": \"Jaké jsou hlavní výhody implementace CI/CD?\",\n      \"answer\": \"Hlavní výhody zahrnují snížení počtu chyb v produkci, rychlejší identifikaci problémů, zlepšení týmové spolupráce a zvýšení kvality kódu. Nasazování je rychlejší a umožňuje lepší reakci na zpětnou vazbu uživatelů.\"\n    },\n    {\n      \"question\": \"Jaké nástroje jsou dostupné pro implementaci CI/CD pipeline?\",\n      \"answer\": \"Mezi oblíbené nástroje patří GitHub Actions, GitLab CI/CD, Azure DevOps, AWS CodePipeline, Google Cloud Build pro cloudová řešení a Jenkins, TeamCity, Bamboo pro self-hosted varianty. Výběr závisí na potřebách projektu a technologickém stacku.\"\n    },\n    {\n      \"question\": \"Jak probíhá implementace CI/CD pipeline?\",\n      \"answer\": \"Proces začíná analýzou současného stavu, návrhem pipeline a implementací základní CI. Důležité je definovat jednotlivé kroky od commitování kódu po nasazení do produkce, včetně testování a postupných kritérií pro přechod do další fáze.\"\n    }\n  ]\n}",
+      "stage": "QAAssistant",
+      "status": "COMPLETED",
+      "timestamp": 1754315033.294693
+    },
+    {
+      "function_key": "image_renderer_assistant",
+      "order": 9,
+      "stage": "ImageRendererAssistant ",
+      "status": "STARTED",
+      "timestamp": 1754315033.294693
+    },
+    {
+      "duration": 49.60025596618652,
+      "function_key": "image_renderer_assistant",
+      "metadata": {},
+      "order": 9,
+      "output": {
+        "config": {
+          "provider": "gemini"
+        },
+        "images": [
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "A detailed infographic illustrating the CI/CD process, showing the flow from Continuous Integration (CI) to Continuous Deployment (CD), including key stages like code integration, automated testing, and deployment. Include icons for popular tools like Jenkins, GitHub Actions, and GitLab CI/CD. Style: flat illustration, colors: blue, green, and orange, aspect ratio: 9:16.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Infografika znázorňuje proces CI/CD, včetně klíčových fází a nástrojů, což pomáhá čtenářům pochopit, jak CI/CD pipeline funguje.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Infografika zobrazující proces CI/CD od integrace po nasazení s ikonami nástrojů jako Jenkins a GitHub Actions.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "sekce Implementace CI/CD pipeline",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "A vector chart showing the stages of implementing a CI/CD pipeline: planning, development, testing, deployment, and monitoring. Include labels for each stage and highlight best practices. Style: vector chart, colors: teal and grey, aspect ratio: 3:2.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Graf znázorňuje jednotlivé fáze implementace CI/CD pipeline, což čtenářům pomáhá pochopit proces krok za krokem.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Graf s fázemi implementace CI/CD pipeline, včetně plánování, testování a nasazení.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "sekce Nástroje pro CI/CD",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Interaktivní seznam nástrojů pro CI/CD, kde uživatelé mohou prozkoumávat různé platformy jako GitHub Actions, GitLab CI/CD a Jenkins, včetně jejich hlavních funkcí a výhod.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Interaktivní seznam nástrojů CI/CD pro prozkoumání funkcí a výhod.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "sekce Testování v CI/CD",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "An infographic illustrating the testing pyramid in CI/CD, showing unit tests at the base, integration tests in the middle, and end-to-end tests at the top. Include descriptions and examples for each test type. Style: flat illustration, colors: pastel shades, aspect ratio: 3:2.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Infografika znázorňuje pyramid testování v CI/CD, což pomáhá čtenářům pochopit různé úrovně testování.",
+            "status": "failed",
+            "url": ""
+          },
+          {
+            "error": "DALL-E generation failed: LLM selhalo po 3 pokusech. Poslední chyba: Gemini Imagen API error: models/imagen-4 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+            "prompt": "Infografika pyramidy testování v CI/CD s jednotkovými, integračními a end-to-end testy.",
+            "status": "failed",
+            "url": ""
+          }
+        ],
+        "model": "imagen-4",
+        "successful_count": 0,
+        "total_count": 14
+      },
+      "stage": "ImageRendererAssistant ",
+      "status": "COMPLETED",
+      "timestamp": 1754315082.894949
+    },
+    {
+      "stage": "save_pipeline_result",
+      "status": "STARTED",
+      "timestamp": 1754315082.894949
+    }
+  ],
+  "topic": "test publish script",
+  "total_assistants": 9,
+  "workflow_id": "assistant_pipeline_test_publish_script_1754314753"
+}

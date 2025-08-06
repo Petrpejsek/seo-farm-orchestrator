@@ -1,19 +1,21 @@
 import requests
 import os
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-def get_api_key(service: str) -> Optional[str]:
+def get_api_key(service: str) -> str:
     """
-    Načte API klíč pro danou službu z backendu nebo environment variables jako fallback.
+    Načte API klíč pro danou službu POUZE z backendu - STRICT MODE, žádné fallbacky.
     
     Args:
         service: Název služby (např. "openai")
         
     Returns:
-        API klíč nebo None pokud není nalezen
+        API klíč z databáze
+        
+    Raises:
+        Exception: Pokud API klíč není nalezen v databázi
     """
     try:
         # Pokus o načtení z backendu
@@ -27,18 +29,12 @@ def get_api_key(service: str) -> Optional[str]:
                 logger.info(f"✅ API klíč pro {service} načten z databáze")
                 return api_key
         
-        logger.warning(f"⚠️ API klíč pro {service} nenalezen v databázi, používám environment variable")
+        # STRICT MODE - žádné fallbacky na environment variables
+        raise Exception(f"❌ API klíč pro {service} nenalezen v databázi (HTTP {response.status_code})")
         
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"❌ Chyba při komunikaci s backendem pro API klíč {service}: {str(e)}")
     except Exception as e:
-        logger.warning(f"⚠️ Chyba při načítání API klíče z backendu: {str(e)}")
-    
-    # Fallback na environment variables
-    env_key_name = f"{service.upper()}_API_KEY"
-    env_key = os.getenv(env_key_name)
-    
-    if env_key:
-        logger.info(f"✅ API klíč pro {service} načten z environment variable")
-        return env_key
-    
-    logger.error(f"❌ API klíč pro {service} nenalezen ani v databázi ani v environment variables")
-    return None 
+        if "API klíč" in str(e):
+            raise  # Re-raise našich custom výjimek
+        raise Exception(f"❌ Neočekávaná chyba při načítání API klíče {service}: {str(e)}") 

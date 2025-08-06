@@ -1,0 +1,46 @@
+# 🏭 PRODUCTION ENVIRONMENT TEMPLATE
+# ==================================
+# Zkopíruj jako .env.production a uprav hodnoty podle svého prostředí
+
+# 🌍 ENVIRONMENT CONFIGURATION
+ENVIRONMENT=production
+HOSTNAME=prod-server-01
+
+# 🌐 API & NETWORKING
+API_BASE_URL=https://api.yourdomain.com
+TEMPORAL_HOST=temporal.yourdomain.com:7233
+TEMPORAL_NAMESPACE=production
+
+# 👤 SECURITY
+WORKER_USER=seouser
+LOG_LEVEL=INFO
+
+# 📁 PATHS (volitelné - automatic based on environment)
+# WORKER_SCRIPT=/opt/seo-farm/production_worker.py
+# PID_FILE=/var/run/seo-farm/worker.pid
+# LOCK_FILE=/var/lock/seo-farm/temporal_worker.lock
+# LOG_FILE=/var/log/seo-farm/worker.log
+
+# 🐍 PYTHON
+PYTHON_EXECUTABLE=/opt/seo-farm/venv/bin/python
+
+# ⏱️ TIMEOUTS
+HEALTH_CHECK_INTERVAL=30
+MAX_STARTUP_WAIT=60
+GRACEFUL_SHUTDOWN_TIMEOUT=30
+
+# 🔑 API KEYS (better use AWS Secrets Manager or similar)
+# OPENAI_API_KEY=sk-...
+# CLAUDE_API_KEY=sk-ant-...
+# GEMINI_API_KEY=AIza...
+
+# 🗄️ DATABASE
+DATABASE_URL=postgresql://seo_user:STRONG_PASSWORD@db.yourdomain.com:5432/seo_farm_prod
+
+# 📊 MONITORING (volitelné)
+# PROMETHEUS_PORT=9090
+# GRAFANA_URL=https://monitoring.yourdomain.com
+
+# 🚨 ALERTING (volitelné)  
+# SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+# EMAIL_ALERTS=admin@yourdomain.com

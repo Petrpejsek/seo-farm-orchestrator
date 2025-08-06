@@ -1,0 +1,16 @@
+{
+  "title": "Článek bez názvu",
+  "slug": "clanek-bez-nazvu",
+  "language": "cs",
+  "date_published": "05. 08. 2025",
+  "generated_at": "2025-08-05T22:14:14.031552",
+  "validation_passed": true,
+  "files": [
+    "outputs/clanek-bez-nazvu/cs/publish.html",
+    "outputs/clanek-bez-nazvu/cs/publish.json",
+    "outputs/clanek-bez-nazvu/cs/wordpress_payload.json"
+  ],
+  "word_count": 1460,
+  "faq_count": 5,
+  "visuals_count": 2
+}

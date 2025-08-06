@@ -1,0 +1,28 @@
+{
+  "images": [
+    {
+      "url": "",
+      "prompt": "An infographic showing the anatomy of a 14-inch children's bicycle, highlighting key components such as frame material, brakes, and ideal weight. Use a flat illustration style with vibrant colors, aspect ratio 9:16.",
+      "status": "failed",
+      "error": "Gemini/FAL generation failed: "
+    },
+    {
+      "url": "",
+      "prompt": "A comparison chart of top children's 14-inch bicycles, including models like Woom 2, Rascal 14, Specialized Riprock 12, and Trek Precaliber 12. Display key features such as weight, frame material, and brake type in a clean, vector style, aspect ratio 3:2.",
+      "status": "failed",
+      "error": "Gemini/FAL generation failed: "
+    },
+    {
+      "url": "",
+      "prompt": "An infographic listing essential and useful accessories for children's bicycles, such as helmets, lights, and baskets. Use a flat illustration style with a 3:2 aspect ratio.",
+      "status": "failed",
+      "error": "Gemini/FAL generation failed: "
+    }
+  ],
+  "successful_count": 0,
+  "total_count": 3,
+  "model": "flux-dev",
+  "config": {
+    "provider": "fal"
+  }
+}

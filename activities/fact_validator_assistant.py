@@ -14,12 +14,7 @@ from datetime import datetime
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-try:
-    from api.database import get_prisma_client
-    DATABASE_AVAILABLE = True
-except ImportError:
-    DATABASE_AVAILABLE = False
-    print("⚠️ Database import failed - using fallback mode")
+from api.database import get_prisma_client
 
 logger = logging.getLogger(__name__)
 
@@ -40,38 +35,31 @@ async def fact_validator_assistant(input_data: Dict[str, Any], assistant_id: Opt
     
     logger.info(f"✅ FactValidatorAssistant validuje data: {len(str(input_data))} znaků")
     
-    # Výchozí parametry
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.3,  # Nižší pro přesnější validaci
-        "top_p": 0.9,
-        "max_tokens": 1000,
-        "system_prompt": "Jsi expert fact-checker a validátor informací. Tvým úkolem je kontrolovat přesnost faktů, statistik a tvrzení v poskytnutém obsahu. Zaměř se na ověření dat, zdrojů a logické konzistence informací."
-    }
+
+
     
     # Pokud máme assistant_id, načteme parametry z databáze
-    if assistant_id and DATABASE_AVAILABLE:
+    if assistant_id:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
             
             if assistant:
                 params = {
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
                 }
                 logger.info(f"✅ Načteny parametry asistenta {assistant_id}")
             else:
-                params = default_params
-                logger.warning(f"⚠️ Asistent {assistant_id} nenalezen, používám výchozí parametry")
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů asistenta: {e}")
-            params = default_params
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
     else:
-        params = default_params
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! FactValidatorAssistant nemůže běžet bez databázové konfigurace!")
     
     # Extrakce obsahu k validaci
     content_to_validate = ""
@@ -91,95 +79,44 @@ async def fact_validator_assistant(input_data: Dict[str, Any], assistant_id: Opt
     else:
         content_to_validate = str(input_data)
     
-    # Prompt pro fact validation
-    validation_prompt = f"""
-Proveď důkladnou fact-check validaci následujícího obsahu:
-
-{content_to_validate}
-
-Potřebuji strukturovanou analýzu v těchto oblastech:
-
-1. FACTUAL ACCURACY
-- Kontrola čísel, statistik a dat
-- Ověření tvrzení a claims
-- Identifikace potenciálně nepřesných informací
-
-2. SOURCE VERIFICATION
-- Kontrola citovaných zdrojů
-- Ověření autoritativnosti odkazů
-- Doporučení na lepší/aktuálnější zdroje
-
-3. LOGICAL CONSISTENCY
-- Kontrola logických spojitostí
-- Identifikace rozporů v argumentaci
-- Ověření kauzálních vztahů
-
-4. COMPLETENESS CHECK
-- Chybějící důležité informace
-- Oblasti vyžadující rozšíření
-- Gaps v pokrytí tématu
-
-5. CORRECTIONS & IMPROVEMENTS
-- Konkrétní opravy faktických chyb
-- Doporučené úpravy a doplnění
-- Priority pro revision
-
-Vrať strukturovaný JSON s těmito sekcemi a overall confidence score (0-100%).
-    """
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Proveď fact-check validaci následujícího obsahu:\n\n{content_to_validate}"
+    
+    # ✅ STRICT IMPLEMENTATION - funguje pouze přes workflow systém!
+    if not assistant_id:
+        raise Exception("❌ FactValidator vyžaduje assistant_id pro databázovou konfiguraci!")
     
     try:
-        # Sestavení zpráv pro OpenAI
-        messages = []
-        if params["system_prompt"]:
-            messages.append({"role": "system", "content": params["system_prompt"]})
-        messages.append({"role": "user", "content": validation_prompt})
-        
         # Volání OpenAI API
-        logger.info(f"🤖 Volám OpenAI API s modelem {params['model']}")
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
         response = client.chat.completions.create(
             model=params["model"],
-            messages=messages,
+            messages=[
+                {"role": "system", "content": params["system_prompt"]},
+                {"role": "user", "content": user_message}
+            ],
             temperature=params["temperature"],
             top_p=params["top_p"],
             max_tokens=params["max_tokens"]
         )
         
         validation_result = response.choices[0].message.content.strip()
-        logger.info("✅ OpenAI API úspěšně vrátilo výsledek validace")
         
-        # Pokus o parsování JSON z odpovědi
-        try:
-            if "```json" in validation_result:
-                json_start = validation_result.find("```json") + 7
-                json_end = validation_result.find("```", json_start)
-                if json_end != -1:
-                    json_str = validation_result[json_start:json_end].strip()
-                    parsed_data = json.loads(json_str)
-                else:
-                    json_str = validation_result[json_start:].strip()
-                    parsed_data = json.loads(json_str)
-            else:
-                parsed_data = json.loads(validation_result)
-            
-            result_data = {
-                "validation_results": parsed_data,
-                "raw_response": validation_result,
-                "input_data": input_data,
-                "validation_status": "success",
-                "assistant": "FactValidatorAssistant",
-                "assistant_id": assistant_id,
-                "model_used": params["model"],
-                "timestamp": datetime.now().isoformat()
-            }
-            return {"output": json.dumps(result_data, ensure_ascii=False)}
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"❌ FactValidator JSON parsing selhalo: {e}")
-            raise Exception(f"FactValidatorAssistant nelze parsovat JSON response: {e}")
-            
+        result_data = {
+            "validation_results": validation_result,
+            "validation_status": "completed",
+            "assistant": "FactValidatorAssistant",
+            "assistant_id": assistant_id,
+            "model_used": params["model"],
+            "timestamp": datetime.now().isoformat()
+        }
     except Exception as e:
-        logger.error(f"❌ Fact validation selhala: {e}")
-        raise Exception(f"FactValidatorAssistant selhal: {e}")
+        logger.error(f"❌ FactValidator selhal: {e}")
+        raise Exception(f"❌ FactValidator selhal: {str(e)} - workflow nemůže pokračovat")
+    
+    return {"output": json.dumps(result_data, ensure_ascii=False)}
 
 
 

@@ -31,6 +31,13 @@ export default function ProjectsPage() {
     description: ''
   });
   const [creating, setCreating] = useState(false);
+  
+  // Stav pro mazání projektů
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    project: Project | null;
+    step: 'first' | 'second' | null;
+  }>({ project: null, step: null });
+  const [deleting, setDeleting] = useState(false);
 
   // Načtení projektů
   const fetchProjects = async () => {
@@ -94,6 +101,30 @@ export default function ProjectsPage() {
       setError(`Chyba při vytváření projektu: ${errorMessage}`);
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Smazání projektu
+  const deleteProject = async (project: Project) => {
+    try {
+      setDeleting(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/project/${project.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Reset stavu a refresh seznamu
+      setDeleteConfirm({ project: null, step: null });
+      fetchProjects();
+    } catch (err) {
+      console.error('Error deleting project:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Neznámá chyba';
+      setError(`Chyba při mazání projektu: ${errorMessage}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -244,15 +275,29 @@ export default function ProjectsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`}>
-                <div className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <div key={project.id} className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <Link href={`/projects/${project.id}`} className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 cursor-pointer">
                       {project.name}
                     </h3>
-                    <span className="text-lg ml-2">{getLanguageFlag(project.language)}</span>
+                  </Link>
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className="text-lg">{getLanguageFlag(project.language)}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirm({ project, step: 'first' });
+                      }}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                      title="Smazat projekt"
+                    >
+                      🗑️
+                    </button>
                   </div>
-                  
+                </div>
+                
+                <Link href={`/projects/${project.id}`} className="block">
                   {project.description && (
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {project.description}
@@ -283,8 +328,8 @@ export default function ProjectsPage() {
                       Vytvořeno: {formatDate(project.createdAt)}
                     </p>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         )}
@@ -296,6 +341,83 @@ export default function ProjectsPage() {
               <span>📊 Celkem projektů: <strong>{projects.length}</strong></span>
               <span>🤖 Celkem asistentů: <strong>{projects.reduce((sum, p) => sum + p.assistantCount, 0)}</strong></span>
               <span>🏃‍♂️ Celkem běhů: <strong>{projects.reduce((sum, p) => sum + p.workflowRunCount, 0)}</strong></span>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm.project && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              {deleteConfirm.step === 'first' && (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">⚠️</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Smazat projekt "{deleteConfirm.project.name}"?
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      Tato akce smaže projekt včetně <strong>{deleteConfirm.project.assistantCount} asistentů</strong> a <strong>{deleteConfirm.project.workflowRunCount} workflow běhů</strong>.
+                    </p>
+                    <p className="text-red-600 text-sm font-medium mt-2">
+                      Tato akce je nevratná!
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteConfirm({ project: deleteConfirm.project, step: 'second' })}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+                    >
+                      🗑️ Pokračovat ve smazání
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm({ project: null, step: null })}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg"
+                    >
+                      ❌ Zrušit
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {deleteConfirm.step === 'second' && (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">🚨</div>
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">
+                      FINÁLNÍ POTVRZENÍ
+                    </h3>
+                    <p className="text-gray-700 text-sm mb-3">
+                      Opravdu chcete natrvalo smazat projekt:
+                    </p>
+                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                      <p className="font-semibold text-red-900">"{deleteConfirm.project.name}"</p>
+                      <p className="text-red-700 text-xs">
+                        {deleteConfirm.project.assistantCount} asistentů • {deleteConfirm.project.workflowRunCount} běhů
+                      </p>
+                    </div>
+                    <p className="text-red-600 font-bold text-sm">
+                      TATO AKCE JE NEVRATNÁ!
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => deleteProject(deleteConfirm.project!)}
+                      disabled={deleting}
+                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
+                      {deleting ? '⏳ Mazání...' : '💀 ANO, SMAZAT NAVŽDY'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm({ project: deleteConfirm.project, step: 'first' })}
+                      disabled={deleting}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
+                    >
+                      ↩️ Zpět
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

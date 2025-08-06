@@ -1,0 +1,7 @@
+2025-08-05 14:54:20,129 [INFO] helpers.transformers: 🔍 Parsing SEO výstupu: 392 znaků
+2025-08-05 14:54:20,133 [INFO] helpers.transformers: ✅ JSON parsing úspěšný
+2025-08-05 14:54:20,133 [INFO] helpers.transformers: ✅ SEO parsing dokončen: title=26, desc=33, keywords=5
+2025-08-05 14:54:20,134 [WARNING] helpers.transformers: ⚠️ humanizer_output_after_fact_validation chybí, používám fallback na humanizer_assistant_output
+2025-08-05 14:54:20,134 [INFO] helpers.transformers: ✅ Content HTML načten VÝHRADNĚ z humanizer_output_after_fact_validation: 203 znaků
+2025-08-05 14:54:20,134 [INFO] helpers.transformers: ✅ Aplikovány SEO nadpisy: H1=True, H2=2, H3=2
+2025-08-05 14:54:20,135 [INFO] helpers.transformers: ✅ Vizuály načteny z multimedia_assistant.primary_visuals: 2 obrázků

@@ -98,7 +98,7 @@ class AssistantPipelineWorkflow:
                 })
                 
                 try:
-                    # 🎯 INTELIGENTNÍ TOPIC SELECTION PRO ASISTENTY
+                    # 🎯 INTELIGENTNÍ TOPIC SELECTION PRO KAŽDÉHO ASISTENTA
                     if function_key == "draft_assistant":
                         # DraftAssistant dostává kombinaci Brief + Research dat
                         brief_output = pipeline_data.get("brief_assistant_output", "")
@@ -111,9 +111,9 @@ class AssistantPipelineWorkflow:
 {research_output}"""
                         
                         workflow.logger.info(f"🎯 DraftAssistant vstup: Brief ({len(brief_output)} chars) + Research ({len(research_output)} chars)")
-                    else:
-                        # ✅ STANDARDNÍ SEKVENČNÍ TOK pro ostatní asistenty
-                        topic_input = pipeline_data["current_output"]
+                    
+                    # ✅ STANDARDNÍ SEKVENČNÍ TOK pro všechny asistenty
+                    topic_input = pipeline_data["current_output"]
                     
                     # Spuštění assistant activity s konfiguračními parametry  
                     assistant_output = await workflow.execute_activity(
@@ -122,7 +122,7 @@ class AssistantPipelineWorkflow:
                             "assistant_config": assistant,
                             "topic": topic_input,  # 🔧 INTELIGENTNÍ TOPIC SELECTION
                             "current_date": pipeline_data["current_date"],  # 📅 AKTUÁLNÍ DATUM PRO VŠECHNY ASISTENTY
-                            "previous_outputs": {}
+                            "previous_outputs": {k: v for k, v in pipeline_data.items() if k.endswith("_output")}
                         },
                         start_to_close_timeout=timedelta(seconds=600),  # 10 minut pro finální asistenty
                         schedule_to_close_timeout=timedelta(seconds=timeout),
@@ -235,6 +235,68 @@ class AssistantPipelineWorkflow:
             if completed_assistants == expected_assistants:
                 workflow.logger.info(f"🎉 ASSISTANT_PIPELINE_COMPLETED: total_duration={total_duration:.2f}s assistants_completed={completed_assistants}/{expected_assistants} ✅")
                 workflow.logger.info(f"🏆 FINÁLNÍ PIPELINE ÚSPĚŠNĚ DOKONČENA - všech {expected_assistants} asistentů z databáze proběhlo!")
+                
+                # 🚀 AUTOMATICKÉ SPUŠTĚNÍ PUBLISH SCRIPTU PO DOKONČENÍ VŠECH ASISTENTŮ
+                try:
+                    stage_name = "PublishScript"
+                    stage_start = workflow.now().timestamp()
+                    workflow.logger.info(f"🚀 PUBLISH_SCRIPT_STARTED: po dokončení {expected_assistants} asistentů")
+                    stage_logs.append({"stage": stage_name, "status": "STARTED", "timestamp": stage_start})
+                    
+                    # Připravení všech výstupů pro publish script
+                    components = {
+                        "brief_assistant_output": pipeline_data.get("brief_assistant_output", ""),
+                        "research_assistant_output": pipeline_data.get("research_assistant_output", ""),
+                        "fact_validator_assistant_output": pipeline_data.get("fact_validator_assistant_output", ""),
+                        "draft_assistant_output": pipeline_data.get("draft_assistant_output", ""),
+                        "humanizer_assistant_output": pipeline_data.get("humanizer_assistant_output", ""),
+                        "seo_assistant_output": pipeline_data.get("seo_assistant_output", ""),
+                        "multimedia_assistant_output": pipeline_data.get("multimedia_assistant_output", ""),
+                        "qa_assistant_output": pipeline_data.get("qa_assistant_output", ""),
+                        "image_renderer_assistant_output": pipeline_data.get("image_renderer_assistant_output", "")
+                    }
+                    
+                    active_components = [k for k,v in components.items() if v]
+                    workflow.logger.info(f"🔧 PUBLISH SCRIPT: {len(active_components)} aktivních komponent z pipeline")
+                    
+                    # Spuštění publish_activity
+                    publish_output = await workflow.execute_activity(
+                        "publish_activity",
+                        {
+                            "assistant_config": {"name": "PublishScript", "function_key": "publish_script"},
+                            "topic": components,  # Pipeline data ze všech asistentů
+                            "current_date": pipeline_data["current_date"],
+                            "previous_outputs": {k: v for k, v in pipeline_data.items() if k.endswith("_output")}
+                        },
+                        start_to_close_timeout=timedelta(seconds=300),  # 5 minut pro deterministický script
+                        schedule_to_close_timeout=timedelta(seconds=300),
+                        heartbeat_timeout=timedelta(seconds=60),
+                        retry_policy=temporalio.common.RetryPolicy(
+                            initial_interval=timedelta(seconds=1),
+                            maximum_interval=timedelta(seconds=5),
+                            maximum_attempts=1,  # 🚫 ŽÁDNÉ RETRY - strict fail fast
+                            backoff_coefficient=1.0
+                        )
+                    )
+                    
+                    stage_duration = workflow.now().timestamp() - stage_start
+                    if publish_output and publish_output.get("success") == True:
+                        workflow.logger.info(f"✅ PUBLISH_SCRIPT_COMPLETED: duration={stage_duration:.2f}s")
+                        stage_logs.append({"stage": stage_name, "status": "COMPLETED", "timestamp": workflow.now().timestamp(), "duration": stage_duration, "output": publish_output})
+                        
+                        # Přidej publish output do finálního výsledku
+                        final_result["publish_output"] = publish_output
+                    else:
+                        workflow.logger.error(f"❌ PUBLISH_SCRIPT_FAILED: duration={stage_duration:.2f}s")
+                        workflow.logger.error(f"❌ PUBLISH_OUTPUT_DEBUG: {publish_output}")
+                        stage_logs.append({"stage": stage_name, "status": "FAILED", "timestamp": workflow.now().timestamp(), "duration": stage_duration, "error": "Publish script failed"})
+                        
+                except Exception as publish_error:
+                    stage_duration = workflow.now().timestamp() - stage_start if 'stage_start' in locals() else 0
+                    workflow.logger.error(f"❌ PUBLISH_SCRIPT_ERROR: {str(publish_error)} duration={stage_duration:.2f}s")
+                    stage_logs.append({"stage": "PublishScript", "status": "FAILED", "timestamp": workflow.now().timestamp(), "duration": stage_duration, "error": str(publish_error)})
+                    # Nepokračujeme s chybou - publish script není kritický pro úspěch pipeline
+                
             else:
                 # 🚫 STRICT MODE - pokud neproběhly všichni asistenti, je to chyba
                 error_msg = f"NEÚPLNÁ PIPELINE - očekáváno {expected_assistants} asistentů z databáze, dokončeno pouze {completed_assistants}"

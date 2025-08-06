@@ -14,12 +14,7 @@ from datetime import datetime
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-try:
-    from api.database import get_prisma_client
-    DATABASE_AVAILABLE = True
-except ImportError:
-    DATABASE_AVAILABLE = False
-    print("⚠️ Database import failed - using fallback mode")
+from api.database import get_prisma_client
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +24,8 @@ try:
     client = OpenAI(api_key=get_api_key("openai"))
 except Exception as e:
     logger.error(f"❌ Nelze inicializovat OpenAI client: {e}")
-    # Fallback na environment variable
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # STRICT MODE - žádné fallbacky na environment variables
+    raise Exception(f"❌ OpenAI client inicializace selhala: {e}")
 
 async def brief_assistant(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -46,17 +41,11 @@ async def brief_assistant(topic: str, assistant_id: Optional[str] = None) -> Dic
     
     logger.info(f"🎯 BriefAssistant zpracovává téma: {topic}")
     
-    # Výchozí parametry
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.8,
-        "top_p": 0.9,
-        "max_tokens": 800,
-        "system_prompt": "Jsi expert na SEO a content marketing. Tvým úkolem je transformovat volně zadaná témata na precizní SEO zadání s jasně definovanými metadaty. Zaměř se na search intent, target audience a keyword strategy."
-    }
+    # Výchozí parametry - BEZ FALLBACK PROMPTU!
+
     
     # Pokud máme assistant_id, načteme parametry z DB
-    if assistant_id and DATABASE_AVAILABLE:
+    if assistant_id:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
@@ -68,18 +57,31 @@ async def brief_assistant(topic: str, assistant_id: Optional[str] = None) -> Dic
                     "temperature": assistant.temperature,
                     "top_p": assistant.top_p,
                     "max_tokens": assistant.max_tokens,
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
+                    "system_prompt": assistant.system_prompt
                 }
             else:
-                logger.warning(f"⚠️ Asistent {assistant_id} nenalezen, používám výchozí parametry")
-                params = default_params
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
         except Exception as e:
             logger.error(f"❌ Chyba při načítání asistenta: {e}")
-            params = default_params
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
     else:
-        params = default_params
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! BriefAssistant nemůže běžet bez databázové konfigurace!")
     
     logger.info(f"🔧 Parametry: model={params['model']}, temp={params['temperature']}, max_tokens={params['max_tokens']}")
+    
+    # Inicializace OpenAI client
+    from utils.api_keys import get_api_key
+    
+    api_key = get_api_key("openai")
+    if not api_key:
+        logger.error("❌ OpenAI API klíč není k dispozici")
+        raise Exception("❌ OpenAI API klíč není k dispozici pro BriefAssistant")
+        
+    client = OpenAI(api_key=api_key)
+    
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Zpracuj téma: {topic}"
     
     # Volání OpenAI API
     try:
@@ -89,24 +91,8 @@ async def brief_assistant(topic: str, assistant_id: Optional[str] = None) -> Dic
                 "content": params["system_prompt"]
             },
             {
-                "role": "user", 
-                "content": f"""Transformuj toto volně zadané téma na profesionální SEO zadání:
-
-TÉMA: "{topic}"
-
-Vrať JSON odpověď v tomto formátu:
-{{
-  "brief": "Přesně formulované SEO zadání (max 150 znaků)",
-  "metadata": {{
-    "type": "SEO",
-    "intent": "informative/commercial/navigational/transactional",
-    "audience": "target skupina",
-    "keyword_focus": "hlavní klíčové slovo",
-    "content_type": "guide/comparison/howto/review/list",
-    "estimated_length": "1500-2000 words",
-    "difficulty": "easy/medium/hard"
-  }}
-}}"""
+                "role": "user",
+                "content": user_message
             }
         ]
         
@@ -115,99 +101,28 @@ Vrať JSON odpověď v tomto formátu:
             messages=messages,
             temperature=params["temperature"],
             top_p=params["top_p"],
-            max_tokens=params["max_tokens"],
-            response_format={"type": "json_object"}
+            max_tokens=params["max_tokens"]
         )
         
-        # Parsování OpenAI odpovědi
-        openai_content = response.choices[0].message.content
-        parsed_response = json.loads(openai_content)
-        
-        # Finální struktura odpovědi s REQUIRED 'output' klíčem pro workflow
-        brief_content = parsed_response.get("brief", f"SEO průvodce: {topic}")
-        metadata = parsed_response.get("metadata", {
-            "type": "SEO",
-            "intent": "informative",
-            "audience": "general",
-            "keyword_focus": topic.lower(),
-            "content_type": "guide",
-            "estimated_length": "2000-3000 words",
-            "difficulty": "medium"
-        })
+        # Výstup přímo z LLM (system_prompt z databáze obsahuje instrukce)
+        brief_content = response.choices[0].message.content.strip()
         
         result = {
             "output": brief_content,  # 🚨 REQUIRED klíč pro workflow
-            "brief": brief_content,
-            "metadata": metadata,
-            "original_topic": topic,
-            "transformation_status": "success",
             "assistant": "BriefAssistant",
             "assistant_id": assistant_id,
-            "openai_params": params,
             "timestamp": datetime.now().isoformat()
         }
         
-        logger.info(f"✅ BriefAssistant dokončen: {result['brief']}")
+        logger.info(f"✅ BriefAssistant dokončen: {len(brief_content)} znaků")
         return result
         
     except Exception as e:
         logger.error(f"❌ Chyba při volání OpenAI: {e}")
-        
-        # Fallback na původní logiku při selhání
-        return await brief_assistant_fallback(topic, assistant_id)
+        # ❌ ŽÁDNÉ FALLBACKY - podle memory 4982004
+        raise Exception(f"BriefAssistant selhal: {e}")
 
-async def brief_assistant_fallback(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
-    """Fallback verze bez OpenAI pro případy selhání"""
-    
-    logger.warning("🔄 Používám fallback verzi BriefAssistant")
-    
-    # Původní placeholder logika
-    topic_lower = topic.lower()
-    
-    if "solární" in topic_lower or "solar" in topic_lower:
-        brief = "Instalace solárních panelů pro byty ve městech – ekonomika, omezení a dotace 2025"
-        metadata = {
-            "type": "SEO",
-            "intent": "informative",
-            "audience": "homeowners",
-            "keyword_focus": "solární panely byty",
-            "content_type": "guide",
-            "estimated_length": "2500-3000 words",
-            "difficulty": "medium"
-        }
-    elif "ai" in topic_lower or "umělá inteligence" in topic_lower:
-        brief = f"AI nástroje pro {topic} – kompletní průvodce výběrem a implementací"
-        metadata = {
-            "type": "SEO", 
-            "intent": "commercial",
-            "audience": "professionals",
-            "keyword_focus": "ai nástroje",
-            "content_type": "comparison",
-            "estimated_length": "3000-4000 words",
-            "difficulty": "medium"
-        }
-    else:
-        brief = f"Komplexní průvodce: {topic} – tipy, trendy a praktické rady 2025"
-        metadata = {
-            "type": "SEO",
-            "intent": "informative",
-            "audience": "general",
-            "keyword_focus": topic.lower(),
-            "content_type": "guide",
-            "estimated_length": "2000-3000 words", 
-            "difficulty": "medium"
-        }
-    
-    return {
-        "output": brief,  # 🚨 REQUIRED klíč pro workflow
-        "brief": brief,
-        "metadata": metadata,
-        "original_topic": topic,
-        "transformation_status": "fallback",
-        "assistant": "BriefAssistant",
-        "assistant_id": assistant_id,
-        "timestamp": datetime.now().isoformat()
-    }
+
 
 # Synchronní wrapper pro zpětnou kompatibilitu
 def brief_assistant_sync(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:

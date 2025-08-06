@@ -76,28 +76,10 @@ async def generate_llm_friendly_content(topic: str) -> str:
             activity.logger.info("Successfully parsed JSON response")
             return result
         except json.JSONDecodeError:
-            # Fallback pokud odpověď není JSON
+            # Pokud odpověď není JSON, použij plain text
             activity.logger.warning("Response is not JSON, returning as plain text")
             return assistant_response
             
     except Exception as e:
         activity.logger.error(f"OpenAI Assistant API error: {str(e)}")
-        # Fallback na původní simulaci
-        activity.logger.info("Using fallback content generation")
-        return f"""
-# {topic}
-
-## Quick Answer
-AI-friendly odpověď na otázku ohledně {topic}.
-
-## FAQ
-- **Co je {topic}?**
-  {topic} je...
-
-- **Jak {topic} pomáhá SEO a AI optimalizaci?**
-  Pomáhá díky strukturovanému obsahu, který LLM umí lépe citovat.
-
-## References
-- Zdroj: https://example.com
-- Data: 70 % uživatelů preferuje AI-friendly obsah
-""" 
+        raise Exception(f"❌ generate_llm_friendly_content selhal: {str(e)} - workflow nemůže pokračovat") 

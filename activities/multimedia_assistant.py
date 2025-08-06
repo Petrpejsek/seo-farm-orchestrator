@@ -28,51 +28,33 @@ async def multimedia_assistant(content: str, assistant_id: Optional[str] = None)
     
     logger.info(f"🎨 MultimediaAssistant generuje multimedia pro: {len(content)} znaků")
     
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.8,
-        "top_p": 0.9,
-        "max_tokens": 1500,
-        "system_prompt": "Jsi kreativní multimedia specialist. Navrhuješ obrázky, videa, infografiky a další vizuální elementy pro web content."
-    }
+    # BEZ FALLBACK PROMPTU!
+
     
     if assistant_id and DATABASE_AVAILABLE:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
             if assistant:
-                default_params.update({
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
-                })
+                if not all([assistant.model, assistant.temperature is not None, assistant.top_p is not None, assistant.max_tokens, assistant.system_prompt]):
+                    raise Exception(f"❌ Asistent {assistant_id} má neúplnou konfiguraci!")
+                
+                params = {
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
+                }
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů: {e}")
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
+    else:
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! MultimediaAssistant nemůže běžet bez databázové konfigurace!")
     
-    prompt = f"""
-Na základě následujícího obsahu navrhni multimedia elementy:
-
-{content[:1000]}...
-
-Vytvoř strukturovaný JSON s návrhy:
-
-1. IMAGES - návrhy obrázků/fotografií
-2. INFOGRAPHICS - návrhy infografik  
-3. VIDEOS - návrhy video obsahu
-4. INTERACTIVE - interaktivní elementy
-5. SOCIAL_MEDIA - social media assets
-
-Pro každý element uveď:
-- title: název
-- description: popis
-- purpose: účel (hero, illustration, social, etc.)
-- alt_text: alt text pro SEO
-- size_recommendation: doporučená velikost
-
-Vrať pouze JSON bez dalšího textu.
-    """
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Navrhni multimedia elementy pro následující obsah:\n\n{content[:1000]}..."
     
     try:
         # Inicializace OpenAI klienta
@@ -83,14 +65,14 @@ Vrať pouze JSON bez dalšího textu.
         client = OpenAI(api_key=api_key)
         
         response = client.chat.completions.create(
-            model=default_params["model"],
+            model=params["model"],
             messages=[
-                {"role": "system", "content": default_params["system_prompt"]},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": params["system_prompt"]},
+                {"role": "user", "content": user_message}
             ],
-            temperature=default_params["temperature"],
-            top_p=default_params["top_p"],
-            max_tokens=default_params["max_tokens"]
+            temperature=params["temperature"],
+            top_p=params["top_p"],
+            max_tokens=params["max_tokens"]
         )
         
         result = response.choices[0].message.content.strip()
@@ -108,23 +90,42 @@ Vrať pouze JSON bez dalšího textu.
                 multimedia_data = json.loads(result)
             
             # Konverze na formát kompatibilní s ImageRendererAssistant
-            image_prompts = []
+            primary_visuals = []
             if multimedia_data and "images" in multimedia_data:
-                for img in multimedia_data["images"]:
-                    image_prompts.append({
+                # 🚨 DVOJÍ HARD LIMIT: Vždy max 4 obrázky!
+                images_to_process = multimedia_data["images"][:4]  # První limit
+                if len(multimedia_data["images"]) > 4:
+                    logger.error(f"🚨 GPT IGNOROVAL INSTRUKCE! Navrhlo {len(multimedia_data['images'])} obrázků místo max 4!")
+                    logger.error(f"🚨 OPRAVUJI: Beru pouze prvních 4 obrázků")
+                
+                for img in images_to_process:
+                    if len(primary_visuals) >= 4:  # Druhý limit - extra bezpečnost
+                        logger.warning(f"🚨 EXTRA BEZPEČNOST: Dosaženo limitu 4 obrázků, ignoruji zbytek")
+                        break
+                        
+                    primary_visuals.append({
                         "type": "image",
                         "image_prompt": f"{img.get('description', img.get('title', 'Professional image'))}, {img.get('alt_text', '')}",
                         "title": img.get("title", "Professional image"),
                         "purpose": img.get("purpose", "illustration"),
+                        "alt_text": img.get("alt_text", ""),
                         "size": img.get("size_recommendation", "1024x1024")
                     })
             
-            # Návrat s output klíčem pro workflow kompatibilitu
-            return {
-                "output": image_prompts,  # ✅ NATIVNÍ OBJEKT, NE STRING!
-                "multimedia_suggestions": multimedia_data,
-                "image_prompts_count": len(image_prompts)
+            # 🚨 FINÁLNÍ KONTROLA: Nikdy víc než 4!
+            if len(primary_visuals) > 4:
+                logger.error(f"🚨 FINÁLNÍ KONTROLA: {len(primary_visuals)} > 4! Ořezávám.")
+                primary_visuals = primary_visuals[:4]
+            
+            logger.info(f"🎨 MultimediaAssistant vygeneroval {len(primary_visuals)} primary visuals pro ImageRenderer")
+            
+            # Vrať ve formátu očekávaném ImageRenderer
+            output_format = {
+                "primary_visuals": primary_visuals,
+                "optional_visuals": []
             }
+            
+            return {"status": "success", "output": output_format}
             
         except json.JSONDecodeError as e:
             logger.error(f"❌ Multimedia JSON parsing selhalo: {e}")

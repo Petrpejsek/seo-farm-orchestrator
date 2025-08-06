@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import ImageGallery from '../../../../components/ImageGallery'
 
 interface WorkflowResult {
   status: string
@@ -33,6 +34,8 @@ interface AssistantCardProps {
   isExpanded: boolean
   onToggleExpand: () => void
   showOutputModal: (output: any, stageName: string) => void
+  retryPublishScript: (stageName: string) => void
+  downloadPublishOutput: (output: any, format: 'html' | 'json') => void
 }
 
 interface OutputModalProps {
@@ -41,6 +44,46 @@ interface OutputModalProps {
   output: any
   stageName: string
 }
+
+// Function to parse image output for ImageRendererAssistant
+const parseImageOutput = (output: any): { images: any[], hasImages: boolean } => {
+  if (!output) return { images: [], hasImages: false };
+  
+  try {
+    let parsedOutput = output;
+    
+    if (typeof output === 'string') {
+      parsedOutput = JSON.parse(output);
+    }
+    
+    // 🔧 OPRAVA: ImageRendererAssistant má strukturu { images: [...] }
+    if (parsedOutput.images && Array.isArray(parsedOutput.images)) {
+      return {
+        images: parsedOutput.images,
+        hasImages: true
+      };
+    }
+    
+    if (parsedOutput.generated_images || parsedOutput.image_urls) {
+      return {
+        images: parsedOutput.generated_images || parsedOutput.image_urls,
+        hasImages: true
+      };
+    }
+    
+    if (Array.isArray(parsedOutput) && parsedOutput.length > 0 && parsedOutput[0].url) {
+      return {
+        images: parsedOutput,
+        hasImages: true
+      };
+    }
+    
+  } catch (e) {
+    // Pokud parsování selže, return false
+  }
+  
+  return { images: [], hasImages: false };
+};
 
 const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) => {
   if (!isOpen) return null;
@@ -243,7 +286,7 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
   );
 };
 
-const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputModal }: AssistantCardProps) => {
+const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputModal, retryPublishScript, downloadPublishOutput }: AssistantCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED': return 'bg-green-50 border-green-200 shadow-sm'
@@ -251,6 +294,7 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
       case 'STARTED': 
       case 'RUNNING': return 'bg-blue-50 border-blue-200 shadow-sm'
       case 'TIMED_OUT': return 'bg-orange-50 border-orange-200 shadow-sm'
+      case 'PENDING': return 'bg-gray-50 border-gray-300 shadow-sm'
       default: return 'bg-gray-50 border-gray-200'
     }
   }
@@ -262,6 +306,7 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
       case 'STARTED':
       case 'RUNNING': return '🔄'
       case 'TIMED_OUT': return '⏰'
+      case 'PENDING': return '⏳'
       default: return '⚠️'
     }
   }
@@ -273,6 +318,7 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
       case 'STARTED': return 'Spuštěno'
       case 'RUNNING': return 'Probíhá...'
       case 'TIMED_OUT': return 'Timeout'
+      case 'PENDING': return 'Čeká na spuštění'
       default: return status
     }
   }
@@ -283,6 +329,7 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
       case 'FAILED': return 'bg-red-500'
       case 'RUNNING': return 'bg-blue-500'
       case 'TIMED_OUT': return 'bg-orange-500'
+      case 'PENDING': return 'bg-gray-400'
       default: return 'bg-gray-300'
     }
   }
@@ -311,15 +358,28 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
             {/* Assistant Info */}
             <div className="flex-1">
               <h4 className="font-semibold text-gray-900 text-lg">
-                {formatAssistantName(stage.stage)}
+                {stage.assistant_name || formatAssistantName(stage.stage)}
               </h4>
+              {stage.assistant_description && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {stage.assistant_description}
+                </p>
+              )}
               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                <span>
-                  {new Date(stage.timestamp * 1000).toLocaleTimeString('cs-CZ')}
-                </span>
-                {stage.duration && (
-                  <span className="flex items-center gap-1">
-                    ⏱️ {stage.duration.toFixed(1)}s
+                {stage.status !== 'PENDING' ? (
+                  <>
+                    <span>
+                      {new Date(stage.timestamp * 1000).toLocaleTimeString('cs-CZ')}
+                    </span>
+                    {stage.duration && (
+                      <span className="flex items-center gap-1">
+                        ⏱️ {stage.duration.toFixed(1)}s
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-500">
+                    ⏳ Čeká na spuštění
                   </span>
                 )}
               </div>
@@ -333,19 +393,45 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
               stage.status === 'FAILED' ? 'bg-red-100 text-red-800' :
               stage.status === 'RUNNING' ? 'bg-blue-100 text-blue-800' :
               stage.status === 'TIMED_OUT' ? 'bg-orange-100 text-orange-800' :
+              stage.status === 'PENDING' ? 'bg-gray-100 text-gray-600' :
               'bg-gray-100 text-gray-800'
             }`}>
               {getStatusText(stage.status)}
             </span>
 
             {/* Output Button */}
-            {stage.output && (
+            {(stage.output || stage.stage_output) && (
               <button
-                onClick={() => showOutputModal(stage.output, stage.stage)}
+                onClick={() => showOutputModal(stage.output || stage.stage_output, stage.stage)}
                 className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
               >
                 📄 Zobrazit výstup
               </button>
+            )}
+
+            {/* PublishScript Special Buttons */}
+            {(stage.stage.toLowerCase().includes('publish') || stage.stage.toLowerCase().includes('publishscript')) && (stage.status === 'COMPLETED' || stage.status === 'FAILED') && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => downloadPublishOutput(stage.output || stage.stage_output, 'html')}
+                  className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
+                >
+                  📄 Stáhnout HTML
+                </button>
+                <button
+                  onClick={() => downloadPublishOutput(stage.output || stage.stage_output, 'json')}
+                  className="px-3 py-1 bg-purple-600 text-white text-xs rounded-md hover:bg-purple-700 transition-colors"
+                >
+                  📊 Stáhnout JSON
+                </button>
+                <button
+                  onClick={() => retryPublishScript(stage.stage)}
+                  className="px-3 py-1 bg-orange-600 text-white text-xs rounded-md hover:bg-orange-700 transition-colors"
+                  title="Regenerovat PublishScript s aktuálními daty asistentů"
+                >
+                  🔧 Regenerovat
+                </button>
+              </div>
             )}
 
             {/* Expand Button */}
@@ -387,13 +473,23 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
                   
                   {/* Retry UI Slot */}
                   <div className="pt-3 border-t border-red-200">
-                    <button 
-                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      disabled
-                      title="Retry funkcionalita bude implementována později"
-                    >
-                      🔄 Opakovat (neimplementováno)
-                    </button>
+                    {(stage.stage.toLowerCase().includes('publish') || stage.stage.toLowerCase().includes('publishscript')) ? (
+                      <button 
+                        onClick={() => retryPublishScript(stage.stage)}
+                        className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+                        title="Spustit pouze PublishScript znovu"
+                      >
+                        🔧 Znovu spustit PublishScript
+                      </button>
+                    ) : (
+                      <button 
+                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled
+                        title="Retry funkcionalita bude implementována později"
+                      >
+                        🔄 Opakovat (neimplementováno)
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -420,7 +516,7 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
           )}
 
           {/* Output placeholder for completed but no output */}
-          {!stage.output && !stage.error && stage.status === 'COMPLETED' && (
+          {!stage.output && !stage.stage_output && !stage.error && stage.status === 'COMPLETED' && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500">
               <span className="text-2xl mb-2 block">📭</span>
               <p>Výstup není dostupný nebo došlo k chybě při generování</p>
@@ -436,18 +532,64 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
               </div>
             </div>
           )}
+
+          {/* 🔧 OPRAVA: Zobrazení výstupu asistentů - hledáme stage_output */}
+          {(stage.output || stage.stage_output) && stage.status === 'COMPLETED' && (
+            <div className="space-y-3">
+              <h5 className="font-semibold text-gray-900 border-b pb-2">📤 Výstup asistenta:</h5>
+              
+              {/* 🎨 Speciální handling pro ImageRendererAssistant */}
+              {(stage.stage?.trim() === 'ImageRendererAssistant' || stage.stage?.includes('ImageRenderer') || stage.stage?.includes('Image')) && (() => {
+                const currentOutput = stage.output || stage.stage_output;
+                const { images, hasImages } = parseImageOutput(currentOutput);
+                if (hasImages) {
+                  return (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
+                      <ImageGallery images={images} title="🎨 Vygenerované obrázky" />
+                    </div>
+                  );
+                }
+              })()}
+              
+              {/* JSON output */}
+              <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                <pre className="text-xs whitespace-pre-wrap break-words font-mono">
+                  {typeof (stage.output || stage.stage_output) === 'string' 
+                    ? (stage.output || stage.stage_output)
+                    : JSON.stringify((stage.output || stage.stage_output), null, 2)}
+                </pre>
+              </div>
+              
+              {/* Copy button */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const content = typeof (stage.output || stage.stage_output) === 'string' 
+                      ? (stage.output || stage.stage_output)
+                      : JSON.stringify((stage.output || stage.stage_output), null, 2);
+                    navigator.clipboard.writeText(content);
+                    alert('Výstup zkopírován do schránky!');
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                >
+                  📋 Kopírovat
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAssistantExpand, showOutputModal }: {
+const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAssistantExpand, showOutputModal, retryPublishScript }: {
   stages: any[]
   assistantOrder: string[]
   expandedAssistants: Set<number>
   toggleAssistantExpand: (index: number) => void
   showOutputModal: (output: any, stageName: string) => void
+  retryPublishScript: (stageName: string) => void
 }) => {
   // Dynamické seřazení podle pořadí z databáze/workflow dat
   const sortedStages = [...stages].sort((a, b) => {
@@ -464,6 +606,54 @@ const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAs
 
   const completedCount = sortedStages.filter(s => s.status === 'COMPLETED').length;
   const failedCount = sortedStages.filter(s => s.status === 'FAILED' || s.status === 'TIMED_OUT').length;
+
+  // 🔧 OPRAVA: Definice downloadPublishOutput funkce před renderováním
+  const downloadPublishOutput = (output: any, format: 'html' | 'json') => {
+    try {
+      let content = '';
+      let filename = '';
+      let mimeType = '';
+
+      if (format === 'html') {
+        // Extract HTML content from PublishScript output
+        if (output && output.contentHtml && typeof output.contentHtml === 'string') {
+          content = output.contentHtml;
+        } else if (output && output.data && output.data.contentHtml && typeof output.data.contentHtml === 'string') {
+          content = output.data.contentHtml;
+        } else if (output && output.output && typeof output.output === 'string') {
+          content = output.output;
+        } else if (output && output.html) {
+          content = output.html;
+        } else {
+          content = JSON.stringify(output, null, 2);
+          console.warn('HTML obsah nenalezen, stahuje se jako JSON:', output);
+        }
+        filename = `article_${new Date().toISOString().slice(0,10)}.html`;
+        mimeType = 'text/html';
+      } else {
+        // JSON format
+        content = JSON.stringify(output, null, 2);
+        filename = `article_data_${new Date().toISOString().slice(0,10)}.json`;
+        mimeType = 'application/json';
+      }
+
+      // Create and download file
+      const blob = new Blob([content], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`✅ Downloaded ${format.toUpperCase()} file:`, filename);
+    } catch (error) {
+      console.error('❌ Error downloading file:', error);
+      alert('Chyba při stahování souboru');
+    }
+  };
 
   return (
     <div className="mb-8">
@@ -503,6 +693,8 @@ const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAs
             isExpanded={expandedAssistants.has(index)}
             onToggleExpand={() => toggleAssistantExpand(index)}
             showOutputModal={showOutputModal}
+            retryPublishScript={retryPublishScript}
+            downloadPublishOutput={downloadPublishOutput}
           />
         ))}
       </div>
@@ -564,7 +756,7 @@ export default function WorkflowDetailPage() {
     
     // Extrahování stage names a seřazení podle timestampu (chronologické pořadí)
     const assistantNames = stageLogsData
-      .filter(log => log.stage && log.stage !== 'load_assistants_config') // Filtrujeme konfigurační fázi
+      .filter(log => log.stage && log.stage !== 'load_assistants_config' && log.stage !== 'save_pipeline_result') // Filtrujeme konfigurační fázi a interní operace
       .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)) // Seřazení chronologicky
       .map(log => log.stage);
       
@@ -573,6 +765,48 @@ export default function WorkflowDetailPage() {
     
     console.log('🔄 Extrahováno pořadí asistentů z workflow:', uniqueOrder);
     return uniqueOrder;
+  };
+
+  // PublishScript specific functions
+
+  const retryPublishScript = async (stageName: string) => {
+    try {
+      setIsTerminating(true);
+      
+      // API call to retry only PublishScript  
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiBaseUrl}/api/retry-publish-script`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflow_id: workflow_id,
+          run_id: run_id,
+          stage: stageName
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ PublishScript retry initiated:', result);
+      
+      // Restart polling to track progress
+      setIsPolling(true);
+      
+      // ✅ PŘIDÁNO - okamžitě refresh dat po regeneraci
+      await fetchWorkflowResult();
+      
+      alert('🔧 PublishScript byl spuštěn znovu. Sledujte progress...');
+    } catch (error) {
+      console.error('❌ Error retrying PublishScript:', error);
+      alert('Chyba při opakování PublishScript');
+    } finally {
+      setIsTerminating(false);
+    }
   };
 
   const fetchWorkflowResult = async () => {
@@ -732,17 +966,153 @@ export default function WorkflowDetailPage() {
   }
 
   const downloadJSON = () => {
-    if (workflowData?.result) {
-      const blob = new Blob([JSON.stringify(workflowData.result, null, 2)], {
-        type: 'application/json'
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `seo-output-${workflow_id}-${run_id}.json`
-      a.click()
-      URL.revokeObjectURL(url)
+    // 🎯 OPRAVA: Stahujeme jen finální článek z PUBLISH asistenta, ne celé workflow
+    const publishStage = workflowData?.stage_logs?.find(log => 
+      log.stage === 'PublishAssistant' && log.status === 'COMPLETED'
+    );
+    
+    if (publishStage?.output) {
+      try {
+        // Pokusíme se parsovat output jako JSON
+        const publishOutput = typeof publishStage.output === 'string' 
+          ? JSON.parse(publishStage.output) 
+          : publishStage.output;
+          
+        const blob = new Blob([JSON.stringify(publishOutput, null, 2)], {
+          type: 'application/json'
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `published-article-${workflow_id}-${run_id}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        
+      } catch (e) {
+        // Fallback: stáhneme raw output jako text
+        const blob = new Blob([publishStage.output], {
+          type: 'application/json'
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `published-article-${workflow_id}-${run_id}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } else {
+      alert('Finální článek není k dispozici - workflow možná ještě není dokončen.')
     }
+  }
+
+  const showAllAssistantOutputs = () => {
+    if (!workflowData?.stage_logs) return;
+
+    // Helper function to clean problematic characters
+    const cleanText = (text: string) => {
+      return text
+        .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
+        .replace(/[\u{2600}-\u{26FF}]/gu, '') // Remove misc symbols
+        .replace(/[\u{2700}-\u{27BF}]/gu, '') // Remove dingbats
+        .replace(/[\u{1F100}-\u{1F1FF}]/gu, '') // Remove enclosed alphanumeric supplement
+        .replace(/\r\n/g, '\n') // Normalize line endings
+        .replace(/\r/g, '\n')
+        .trim();
+    };
+
+    // Helper function to format output safely
+    const formatOutput = (output: any) => {
+      if (!output) return '(žádný output)';
+      
+      if (typeof output === 'string') {
+        return cleanText(output);
+      } else {
+        try {
+          return JSON.stringify(output, null, 2);
+        } catch (e) {
+          return `(chyba při formatování: ${e})`;
+        }
+      }
+    };
+
+    // Helper function to format assistant name
+    const formatAssistantName = (stageName: string) => {
+      return stageName
+        .replace('Assistant', '')
+        .replace('_assistant', '')
+        .replace('_', ' ')
+        .toUpperCase();
+    };
+
+    console.log('🔍 Dostupné stage názvy:', workflowData.stage_logs.map(log => log.stage));
+
+    // 🔧 OPRAVA: Používáme CHRONOLOGICKÉ POŘADÍ podle timestamp (stejné jako pipeline)
+    // Místo hardcoded mappings řadíme podle skutečného pořadí spuštění
+
+    // Nejdřív seskupíme záznamy podle stage názvu a vezmeme jen nejnovější pro každý stage
+    const stageGroups = workflowData.stage_logs
+      .filter(log => log.stage && log.stage !== 'load_assistants_config' && log.stage !== 'save_pipeline_result')
+      .reduce((groups, log) => {
+        const stageName = log.stage;
+        if (!groups[stageName] || log.timestamp > groups[stageName].timestamp) {
+          groups[stageName] = log;
+        }
+        return groups;
+      }, {});
+
+    // Převedeme na array a seřadíme chronologicky podle původního timestamp (ne nejnovějšího)
+    const allStages = Object.values(stageGroups)
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    // Filtrujeme jen dokončené pro hlavní sekci a omezujeme na prvních 8
+    const assistantStages = allStages.filter(log => log.status === 'COMPLETED').slice(0, 8);
+
+    let combinedOutput = `# KOMPLETNÍ OUTPUTY ASISTENTŮ 1-8\n`;
+    combinedOutput += `Workflow: ${workflow_id}\n`;
+    combinedOutput += `Run ID: ${run_id}\n`;
+    combinedOutput += `Čas: ${new Date().toLocaleString('cs-CZ')}\n`;
+    combinedOutput += `Pořadí: CHRONOLOGICKÉ (podle skutečného spuštění v pipeline)\n\n`;
+    combinedOutput += `${'='.repeat(80)}\n\n`;
+
+    assistantStages.forEach((stage, index) => {
+      combinedOutput += `## ${index + 1}. ${formatAssistantName(stage.stage)}\n`;
+      combinedOutput += `Status: ✅ DOKONČENO\n`;
+      combinedOutput += `Stage název: ${stage.stage}\n`;
+      
+      if (stage.duration) {
+        combinedOutput += `Doba trvání: ${stage.duration.toFixed(1)}s\n`;
+      }
+      
+      combinedOutput += `Čas spuštění: ${new Date(stage.timestamp * 1000).toLocaleString('cs-CZ')}\n`;
+      combinedOutput += `Chronologické pořadí: #${index + 1}\n\n`;
+      
+      combinedOutput += `### VÝSTUP:\n`;
+      combinedOutput += formatOutput(stage.output);
+      
+      combinedOutput += `\n\n${'-'.repeat(60)}\n\n`;
+    });
+
+    // Nedokončené asistenti - jen ti, kteří skutečně nejsou dokončení
+    const incompleteStages = allStages.filter(log => log.status !== 'COMPLETED');
+
+    if (incompleteStages.length > 0) {
+      combinedOutput += `# NEDOKONČENÉ ASISTENTI\n\n`;
+      incompleteStages.forEach((stage, index) => {
+        combinedOutput += `## ${formatAssistantName(stage.stage)}\n`;
+        combinedOutput += `Status: ❌ ${stage.status}\n`;
+        combinedOutput += `Stage název: ${stage.stage}\n`;
+        if (stage.error) {
+          combinedOutput += `Chyba: ${stage.error}\n`;
+        }
+        combinedOutput += `\n${'-'.repeat(40)}\n\n`;
+      });
+    }
+
+    // Clean the entire output before showing
+    const cleanedOutput = cleanText(combinedOutput);
+    
+    // Show modal with the combined output
+    showOutputModal(cleanedOutput, `Kompletní outputy asistentů 1-${assistantStages.length} (chronologické pořadí)`);
   }
 
   if (loading) {
@@ -916,11 +1286,55 @@ export default function WorkflowDetailPage() {
             {/* Enhanced Pipeline Progress Component */}
             {workflowData.stage_logs && workflowData.stage_logs.length > 0 && (
               <PipelineProgress
-                stages={workflowData.stage_logs}
+                stages={(() => {
+                  // PŮVODNÍ LOGIKA - zobrazit workflow logy + deduplikovat PublishScript
+                  let originalStages = workflowData.stage_logs.filter(log => 
+                    log.stage && 
+                    log.stage !== 'load_assistants_config' && 
+                    log.stage !== 'save_pipeline_result'
+                  );
+                  
+                  // 🔧 OPRAVA: Deduplikovat PublishScript - nechat jen poslední (nejnovější)
+                  const publishScriptStages = originalStages.filter(stage => 
+                    stage.stage === 'PublishScript'
+                  );
+                  
+                  if (publishScriptStages.length > 1) {
+                    // Odstraň všechny PublishScript
+                    originalStages = originalStages.filter(stage => stage.stage !== 'PublishScript');
+                    // Přidej jen poslední (nejnovější) PublishScript
+                    const latestPublishScript = publishScriptStages[publishScriptStages.length - 1];
+                    originalStages.push(latestPublishScript);
+                  }
+                  
+                  // Přidat PublishScript jako poslední pokud není v logách vůbec
+                  const hasPublishScript = originalStages.some(stage => 
+                    stage.stage === 'PublishScript' || stage.stage === 'publish_script'
+                  );
+                  
+                  if (!hasPublishScript) {
+                    const publishScriptStage = {
+                      stage: 'publish_script',
+                      status: 'PENDING',
+                      timestamp: 0,
+                      duration: undefined,
+                      error: undefined,
+                      output: undefined,
+                      assistant_name: 'PublishScript (Deterministický)',
+                      assistant_description: '🔧 DETERMINISTICKÝ SCRIPT - už není AI! Převádí pipeline data na HTML/JSON export bez LLM volání.'
+                    };
+                    
+                    originalStages.push(publishScriptStage);
+                  }
+                  
+                  console.log('🔧 Pipeline stages s PublishScript:', originalStages);
+                  return originalStages;
+                })()}
                 assistantOrder={assistantOrder}
                 expandedAssistants={expandedAssistants}
                 toggleAssistantExpand={toggleAssistantExpand}
                 showOutputModal={showOutputModal}
+                retryPublishScript={retryPublishScript}
               />
             )}
 
@@ -928,15 +1342,45 @@ export default function WorkflowDetailPage() {
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">📄 Finální JSON Výstup</h2>
-                  <button
-                    onClick={downloadJSON}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    📥 Stáhnout JSON
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={showAllAssistantOutputs}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                      title="Zobrazí outputy všech asistentů 1-8 v okně pro prohlížení a kopírování"
+                    >
+                      📋 Zobrazit výstupy 1-8
+                    </button>
+                    <button
+                      onClick={downloadJSON}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      📥 Stáhnout JSON
+                    </button>
+                  </div>
                 </div>
                 <pre className="bg-gray-100 border rounded p-4 text-sm overflow-auto max-h-96">
-                  {JSON.stringify(workflowData.result, null, 2)}
+                  {(() => {
+                    // 🎯 OPRAVA: Zobrazujeme jen finální článek z PUBLISH asistenta, ne celé workflow
+                    const publishStage = workflowData.stage_logs?.find(log => 
+                      log.stage === 'PublishAssistant' && log.status === 'COMPLETED'
+                    );
+                    
+                    if (publishStage?.output) {
+                      try {
+                        // Pokusíme se parsovat output jako JSON
+                        const publishOutput = typeof publishStage.output === 'string' 
+                          ? JSON.parse(publishStage.output) 
+                          : publishStage.output;
+                        return JSON.stringify(publishOutput, null, 2);
+                      } catch (e) {
+                        // Pokud se nepodaří parsovat, zobrazíme raw output
+                        return publishStage.output;
+                      }
+                    }
+                    
+                    // Fallback: pokud není PublishAssistant dostupný
+                    return "Finální výstup není k dispozici - workflow možná ještě není dokončen.";
+                  })()}
                 </pre>
               </>
             )}

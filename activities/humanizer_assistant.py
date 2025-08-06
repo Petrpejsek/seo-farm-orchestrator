@@ -26,33 +26,37 @@ async def humanizer_assistant(content: str, assistant_id: Optional[str] = None) 
     
     logger.info(f"👤 HumanizerAssistant humanizuje content: {len(content)} znaků")
     
-    # Výchozí parametry
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "max_tokens": 2000,
-        "system_prompt": "Jsi expert na humanizaci AI-generovaného obsahu. Tvým úkolem je udělat text přirozenější, čitelnější a více lidský, zachovat informační hodnotu a zlepšit flow textu."
-    }
+    # Výchozí parametry - BEZ FALLBACK PROMPTU!
+
     
-    # Prompt pro humanizaci
-    humanization_prompt = f"""
-Humanizuj následující AI-generovaný obsah. Udělej ho přirozenější, čitelnější a více lidský:
-
-{content}
-
-POŽADAVKY:
-- Zachovej všechny důležité informace a fakta
-- Zlepši flow a čitelnost textu
-- Přidej přirozené přechody mezi odstavci
-- Použij variantnější slovník a formulace
-- Odstraň příliš formální nebo robotický jazyk
-- Zachovej HTML strukturu a tagy
-- Přidej více osobnosti a tónu hlasu
-- Udělej text poutavější pro čtenáře
-
-Vrať pouze upravený text bez dodatečných komentářů.
-    """
+    # Pokud máme assistant_id, načteme parametry z databáze
+    if assistant_id and DATABASE_AVAILABLE:
+        try:
+            prisma = await get_prisma_client()
+            assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
+            
+            if assistant:
+                if not all([assistant.model, assistant.temperature is not None, assistant.top_p is not None, assistant.max_tokens, assistant.system_prompt]):
+                    raise Exception(f"❌ Asistent {assistant_id} má neúplnou konfiguraci!")
+                
+                params = {
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
+                }
+            else:
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
+        except Exception as e:
+            logger.error(f"❌ Chyba při načítání parametrů: {e}")
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
+    else:
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! HumanizerAssistant nemůže běžet bez databázové konfigurace!")
+    
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Humanizuj následující obsah:\n\n{content}"
     
     try:
         # Inicializace OpenAI client
@@ -65,18 +69,18 @@ Vrať pouze upravený text bez dodatečných komentářů.
         
         # Sestavení zpráv pro OpenAI
         messages = [
-            {"role": "system", "content": default_params["system_prompt"]},
-            {"role": "user", "content": humanization_prompt}
+            {"role": "system", "content": params["system_prompt"]},
+            {"role": "user", "content": user_message}
         ]
         
         # Volání OpenAI API
-        logger.info(f"🤖 Volám OpenAI API s modelem {default_params['model']}")
+        logger.info(f"🤖 Volám OpenAI API s modelem {params['model']}")
         response = client.chat.completions.create(
-            model=default_params["model"],
+            model=params["model"],
             messages=messages,
-            temperature=default_params["temperature"],
-            top_p=default_params["top_p"],
-            max_tokens=default_params["max_tokens"]
+            temperature=params["temperature"],
+            top_p=params["top_p"],
+            max_tokens=params["max_tokens"]
         )
         
         humanized_content = response.choices[0].message.content.strip()

@@ -168,15 +168,35 @@ async def safe_llm_call(
             logger.info(f"🔍 FUNC DEBUG: func_name='{func_name}', func_str='{func_str}'")
             
             if 'image_generation' in func_name or 'image_generation' in func_str:
-                # Pro image generation API - používáme pouze prompt parametr
+                # Pro image generation API - používáme prompt + model parametr
                 prompt = kwargs.get('prompt', kwargs.get('user_message', ''))
                 size = kwargs.get('size', '1024x1024')
                 quality = kwargs.get('quality', 'standard')
                 style = kwargs.get('style', 'vivid')
-                result = await llm_func(prompt=prompt, size=size, quality=quality, style=style)
+                logger.info(f"🎨 IMAGE GENERATION: provider={provider}, model={model}, prompt={prompt[:100]}...")
+                result = await llm_func(prompt=prompt, model=model, size=size, quality=quality, style=style)
             else:
-                # Pro chat completion API - standardní parametry
-                result = await llm_func(model=model, **kwargs)
+                # Pro chat completion API - KONVERZE NA STRING!!
+                system_prompt = kwargs.get('system_prompt', '')
+                user_message = kwargs.get('user_message', '')
+                
+                # 🔧 KRITICKÁ OPRAVA: VŽDY PŘEVÉST user_message NA STRING!
+                if not isinstance(user_message, str):
+                    logger.warning(f"⚠️ user_message není string: {type(user_message)}, převádím na string")
+                    user_message = str(user_message)
+                
+                temperature = kwargs.get('temperature', 0.7)
+                max_tokens = kwargs.get('max_tokens')
+                
+                logger.info(f"🔍 LLM_CALL DEBUG: user_message type={type(user_message)}, len={len(user_message)}")
+                
+                result = await llm_func(
+                    system_prompt=system_prompt,
+                    user_message=user_message, 
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
             
             # Kontrola výsledku podle typu API
             if result:

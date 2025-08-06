@@ -756,7 +756,7 @@ export default function WorkflowRunDetailPage() {
                 if (images && images.length > 0) {
                   return (
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 mb-4">
-                      <ImageGallery images={images} title="🎨 Vygenerované obrázky z DALL·E" />
+                      <ImageGallery images={images} title="🎨 Vygenerované obrázky" />
                     </div>
                   );
                 }

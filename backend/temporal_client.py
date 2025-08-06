@@ -44,9 +44,9 @@ def extract_topic_from_workflow_id(workflow_id: str) -> str:
         if topic:
             topic = topic[0].upper() + topic[1:]
         
-        # Fallback pokud je prázdné
+        # STRICT MODE - žádné fallbacky
         if not topic.strip():
-            topic = f"Workflow {workflow_id}"
+            raise ValueError("❌ Topic parameter je prázdný - musí být explicitně zadán")
             
         return topic
         
@@ -70,9 +70,14 @@ async def start_seo_pipeline(topic: str, project_id: Optional[str] = None, csv_b
         Exception: Pokud chybí připojení k Temporal serveru
     """
     try:
-        # Načtení konfigurace z ENV
-        temporal_host = os.getenv("TEMPORAL_HOST", "localhost:7233")
-        temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+        # Načtení konfigurace z ENV - STRICT MODE
+        temporal_host = os.getenv("TEMPORAL_HOST")
+        temporal_namespace = os.getenv("TEMPORAL_NAMESPACE")
+        
+        if not temporal_host:
+            raise Exception("❌ TEMPORAL_HOST environment variable musí být explicitně nastavena")
+        if not temporal_namespace:
+            raise Exception("❌ TEMPORAL_NAMESPACE environment variable musí být explicitně nastavena")
         
         logger.info(f"🔧 Temporal konfigurace:")
         logger.info(f"   🌐 Host: {temporal_host}")
@@ -175,7 +180,7 @@ async def start_seo_pipeline(topic: str, project_id: Optional[str] = None, csv_b
         logger.info("🚀 Spouštím workflow...")
         logger.info(f"   🎯 Target: {workflow_type}")
         logger.info(f"   🆔 ID: {workflow_id}")
-        logger.info(f"   📥 Task queue: default")
+        logger.info(f"   📥 Task queue: {os.getenv('TEMPORAL_TASK_QUEUE', 'default')}")
         
         try:
             if project_id and workflow_type == "AssistantPipelineWorkflow":
@@ -187,7 +192,7 @@ async def start_seo_pipeline(topic: str, project_id: Optional[str] = None, csv_b
                     "AssistantPipelineWorkflow",
                     args=[topic, project_id, csv_base64, current_date],
                     id=workflow_id,
-                    task_queue="default",
+                    task_queue=os.getenv("TEMPORAL_TASK_QUEUE", "default"),  # Explicit env nebo standard
                     run_timeout=__import__('datetime').timedelta(minutes=run_timeout_minutes),
                     task_timeout=__import__('datetime').timedelta(minutes=task_timeout_minutes)
                 )
@@ -245,7 +250,7 @@ async def list_workflows(limit: int = 30) -> list[dict]:
     Načte seznam workflow executions z Temporal serveru.
     
     Args:
-        limit: Maximální počet výsledků (default 30)
+        limit: Maximální počet výsledků
         
     Returns:
         List[dict] s workflow informacemi
@@ -256,7 +261,9 @@ async def list_workflows(limit: int = 30) -> list[dict]:
         Exception: Pro ostatní neočekávané chyby
     """
     temporal_host = os.getenv("TEMPORAL_HOST", "localhost:7233")
-    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE")
+    if not temporal_namespace:
+        raise Exception("❌ TEMPORAL_NAMESPACE environment variable musí být explicitně nastavena")
     
     logger.info(f"🔌 Připojuji se k Temporal: {temporal_host}, namespace: {temporal_namespace}")
     
@@ -352,7 +359,9 @@ async def get_workflow_result(workflow_id: str, run_id: str) -> dict:
         Exception: Pro ostatní neočekávané chyby
     """
     temporal_host = os.getenv("TEMPORAL_HOST", "localhost:7233")
-    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE")
+    if not temporal_namespace:
+        raise Exception("❌ TEMPORAL_NAMESPACE environment variable musí být explicitně nastavena")
     
     logger.info(f"🔍 Načítám výsledek workflow: {workflow_id} (run: {run_id})")
     
@@ -470,7 +479,9 @@ async def describe_workflow_execution(workflow_id: str, run_id: str) -> dict:
         Exception: Pro ostatní neočekávané chyby
     """
     temporal_host = os.getenv("TEMPORAL_HOST", "localhost:7233")
-    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE")
+    if not temporal_namespace:
+        raise Exception("❌ TEMPORAL_NAMESPACE environment variable musí být explicitně nastavena")
     
     logger.info(f"🔍 Načítám detailní diagnostiku workflow: {workflow_id} (run: {run_id})")
     
@@ -773,7 +784,9 @@ async def terminate_workflow(workflow_id: str, run_id: str, reason: str = "Manua
         Exception: Pro ostatní neočekávané chyby
     """
     temporal_host = os.getenv("TEMPORAL_HOST", "localhost:7233")
-    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+    temporal_namespace = os.getenv("TEMPORAL_NAMESPACE")
+    if not temporal_namespace:
+        raise Exception("❌ TEMPORAL_NAMESPACE environment variable musí být explicitně nastavena")
     
     logger.info(f"⛔ Ukončuji workflow: {workflow_id} (run: {run_id}) - důvod: {reason}")
     

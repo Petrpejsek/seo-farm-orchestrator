@@ -45,10 +45,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Frontend development server (primary)
-        "http://localhost:3001",  # Frontend development server (fallback)
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
+        "http://localhost:3001",  # Frontend development server (primary port)
+        "http://127.0.0.1:3001",  # Alternative localhost format
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -267,11 +265,39 @@ async def get_workflow_result_endpoint(
     logger.info(f"📤 Fetch result: workflow_id={workflow_id}, run_id={run_id}")
     
     try:
-        # Nejdřív získáme základní výsledek workflow
-        result_data = await get_workflow_result(workflow_id=workflow_id, run_id=run_id)
+        # 🔧 OPRAVA: Nejdřív zkusíme načíst aktualizovaná data z databáze
+        from api.database import get_prisma_client
+        prisma = await get_prisma_client()
         
-        # Aktualizace statusu v databázi na základě Temporal výsledku
-        await update_workflow_status_in_database(workflow_id=workflow_id, run_id=run_id, result_data=result_data)
+        # Hledáme workflow v databázi
+        db_run = await prisma.workflowrun.find_unique(
+            where={
+                "workflowId_runId": {
+                    "workflowId": workflow_id,
+                    "runId": run_id
+                }
+            }
+        )
+        
+
+        
+        # Pokud máme uložená aktualizovaná data z retry, použijeme je
+        if db_run and db_run.resultJson:
+            try:
+                import json
+                result_data = json.loads(db_run.resultJson)
+
+                logger.info("✅ Načtena aktualizovaná data z databáze (včetně retry změn)")
+            except Exception as e:
+                # Fallback na Temporal pokud JSON parsing selže
+                result_data = await get_workflow_result(workflow_id=workflow_id, run_id=run_id)
+                logger.warning(f"JSON parsing failed, using Temporal data: {e}")
+        else:
+            # Načteme z Temporal a aktualizujeme databázi
+            logger.info("No database data found, loading from Temporal")
+            result_data = await get_workflow_result(workflow_id=workflow_id, run_id=run_id)
+            await update_workflow_status_in_database(workflow_id=workflow_id, run_id=run_id, result_data=result_data)
+            logger.info("✅ Načtena fresh data z Temporal")
         
         # Přidáme diagnostické informace pro RUNNING i TIMED_OUT workflow  
         if result_data.get("status") in ["RUNNING", "TIMED_OUT", "FAILED"]:
@@ -407,9 +433,10 @@ async def update_workflow_status_in_database(workflow_id: str, run_id: str, resu
         from api.routes.workflow_run import get_prisma_client
         from datetime import datetime
         
-        logger.info(f"🔄 Aktualizuji status workflow v databázi: {workflow_id}")
+
         
         prisma = await get_prisma_client()
+
         
         # Najdeme workflow run podle workflowId a runId
         existing_run = await prisma.workflowrun.find_unique(
@@ -459,18 +486,349 @@ async def update_workflow_status_in_database(workflow_id: str, run_id: str, resu
             update_fields["stageCount"] = completed_stages
             update_fields["totalStages"] = total_stages
         
+        # 🔧 KRITICKÉ: Uložíme celou aktualizovanou strukturu do databáze
+        # Frontend potřebuje přístup k aktualizovaným stages po retry
+        # Používáme existující pole resultJson místo vytváření nového
+        update_fields["resultJson"] = json.dumps(result_data, ensure_ascii=False)
+        logger.info(f"💾 Ukládám celou workflow strukturu do databáze (včetně stages)")
+        
+
+        
         # Aktualizace v databázi
         updated_run = await prisma.workflowrun.update(
             where={"id": existing_run.id},
             data=update_fields
         )
         
-        logger.info(f"✅ Workflow run aktualizován: {updated_run.status} ({updated_run.stageCount}/{updated_run.totalStages} stages)")
+        logger.info(f"✅ Database updated: {updated_run.status} ({updated_run.stageCount}/{updated_run.totalStages} stages)")
         
     except Exception as e:
-        logger.error(f"⚠️ Chyba při aktualizaci workflow statusu v databázi: {str(e)}")
+        logger.error(f"❌ Database update failed: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         # Nebudeme hadit exception, aby to nerozhodilo hlavní flow
 
+
+@app.post("/api/retry-publish-script")
+async def retry_publish_script(request: dict):
+    """
+    Spustí pouze PublishScript bez celé pipeline pro úsporu AI kreditů
+    """
+    try:
+        workflow_id = request.get("workflow_id")
+        run_id = request.get("run_id")
+        stage = request.get("stage")
+        
+        if not workflow_id or not run_id:
+            raise HTTPException(status_code=400, detail="workflow_id a run_id jsou povinné")
+        
+        logger.info(f"🔧 Retry PublishScript:")
+        logger.info(f"   🆔 URL Workflow ID: {workflow_id}")
+        logger.info(f"   🏃 URL Run ID: {run_id}")
+        logger.info(f"   📋 Stage: {stage}")
+        
+        # 🔍 OPRAVA: Nejdřív resolvujeme správné Temporal IDs z databáze
+        from api.database import get_prisma_client
+        
+        try:
+            prisma = await get_prisma_client()
+            
+            # Hledáme workflow v databázi podle URL parametrů
+            # URL parametry mohou být část názvu workflow_id, takže hledáme přes LIKE
+            workflow_records = await prisma.workflowrun.find_many(
+                where={
+                    "OR": [
+                        {"workflowId": {"contains": workflow_id}},
+                        {"runId": run_id},
+                        {"id": run_id}  # možná run_id je database ID
+                    ]
+                }
+            )
+            
+            if not workflow_records:
+                logger.error(f"❌ Nenašel jsem workflow v databázi pro URL parametry")
+                raise HTTPException(status_code=404, detail=f"Workflow nenalezen v databázi pro zadané parametry")
+            
+            # Bereme první (a pravděpodobně jediný) záznam
+            workflow_record = workflow_records[0]
+            actual_workflow_id = workflow_record.workflowId
+            actual_run_id = workflow_record.runId
+            
+            logger.info(f"✅ Resolvovány správné Temporal IDs:")
+            logger.info(f"   🎯 Skutečný Workflow ID: {actual_workflow_id}")
+            logger.info(f"   🎯 Skutečný Run ID: {actual_run_id}")
+            
+        except Exception as db_error:
+            logger.error(f"❌ Chyba při hledání workflow v databázi: {db_error}")
+            raise HTTPException(status_code=500, detail=f"Chyba při hledání workflow: {str(db_error)}")
+        
+        # Načteme workflow výsledek pro získání pipeline dat
+        from temporal_client import get_workflow_result
+        
+        workflow_result = await get_workflow_result(actual_workflow_id, actual_run_id)
+        
+        if not workflow_result or not workflow_result.get("result"):
+            raise HTTPException(status_code=404, detail="Workflow data nenalezena")
+        
+        pipeline_data = workflow_result["result"]
+        
+        # Spustíme pouze publish_activity s aktuálními daty
+        from temporalio.client import Client
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+        from workflows.assistant_pipeline_workflow import AssistantPipelineWorkflow
+        
+        # Připojení k Temporal
+        client = await Client.connect("localhost:7233")
+        
+        # DIAGNOSTIKA: Zkontrolujme strukturu dat
+        logger.info(f"🔍 Pipeline data keys: {list(pipeline_data.keys())}")
+        logger.info(f"🔍 Pipeline final_output sample: {str(pipeline_data.get('final_output', 'MISSING'))[:300]}...")
+        
+        # Pipeline data obsahuje stage_logs, ale potřebujeme finální výstup
+        final_output = pipeline_data.get("final_output", "")
+        
+        if isinstance(final_output, str) and final_output.strip().startswith('{'):
+            # Pokud je final_output JSON string, parsujeme ho
+            try:
+                import json
+                final_output = json.loads(final_output)
+                logger.info("✅ Final output úspěšně parsován jako JSON")
+            except:
+                logger.warning("⚠️ Nelze parsovat final output jako JSON")
+        
+        # SPRÁVNÁ EXTRAKCE DAT ze stage_logs
+        stage_logs = pipeline_data.get("stage_logs", [])
+        logger.info(f"📊 Nalezeno {len(stage_logs)} stage logs")
+        
+        # CHRONOLOGICKÁ DIAGNOSTIKA PIPELINE
+        logger.info("🔍 CHRONOLOGIE PIPELINE:")
+        for i, log in enumerate(stage_logs):
+            stage = log.get("stage", "UNKNOWN")
+            status = log.get("status", "UNKNOWN")
+            output_preview = str(log.get("output", ""))[:100] + "..." if log.get("output") else "NO OUTPUT"
+            logger.info(f"  {i+1:2d}. {stage} - {status} - {output_preview}")
+        
+        # Extrakce výstupů asistentů ze stage_logs
+        components = {
+            "draft_assistant_output": "",
+            "seo_assistant_output": "",
+            "humanizer_assistant_output": "",
+            "humanizer_output_after_fact_validation": "",  # ✅ PŘIDÁNO
+            "multimedia_assistant_output": "",
+            "image_renderer_assistant_output": "",
+            "qa_assistant_output": "",
+            "fact_validator_assistant_output": "",
+            "brief_assistant_output": ""
+        }
+        
+        # Projdeme stage_logs a najdeme výstupy jednotlivých asistentů
+        for log in stage_logs:
+            stage_name = log.get("stage", "")
+            output = log.get("output", "")
+            
+            if stage_name and output:
+                # 🔍 DETAILNÍ DEBUG MAPPING
+                logger.info(f"🔍 Zpracovávám stage: '{stage_name}' -> output length: {len(str(output))}")
+                
+                # Mapování stage names na component keys
+                if "seo" in stage_name.lower():
+                    components["seo_assistant_output"] = output
+                    logger.info(f"✅ SEO output ÚSPĚŠNĚ namapován: {len(str(output))} znaků")
+                    logger.info(f"🔍 SEO output preview: {str(output)[:200]}...")
+                elif "draft" in stage_name.lower():
+                    components["draft_assistant_output"] = output
+                    logger.info(f"✅ Draft output nalezen: {len(str(output))} znaků")
+                elif "humanizer" in stage_name.lower():
+                    components["humanizer_assistant_output"] = output
+                    components["humanizer_output_after_fact_validation"] = output  # ✅ PŘIDÁNO - same jako humanizer
+                    logger.info(f"✅ Humanizer output nalezen: {len(str(output))} znaků")
+                    logger.info(f"✅ Humanizer také namapován jako humanizer_output_after_fact_validation")
+                elif "multimedia" in stage_name.lower():
+                    components["multimedia_assistant_output"] = output
+                    logger.info(f"✅ Multimedia output nalezen: {len(str(output))} znaků")
+                elif "image" in stage_name.lower():
+                    components["image_renderer_assistant_output"] = output
+                    logger.info(f"✅ Image output nalezen: {len(str(output))} znaků")
+                elif "qa" in stage_name.lower():
+                    components["qa_assistant_output"] = output
+                    logger.info(f"✅ QA output nalezen: {len(str(output))} znaků")
+                elif "fact" in stage_name.lower() or "validator" in stage_name.lower():
+                    components["fact_validator_assistant_output"] = output
+                    logger.info(f"✅ FactValidator output nalezen: {len(str(output))} znaků")
+                elif "brief" in stage_name.lower():
+                    components["brief_assistant_output"] = output
+                    logger.info(f"✅ Brief output nalezen: {len(str(output))} znaků")
+        
+        logger.info(f"📊 Extrakce dokončena: {sum(1 for v in components.values() if v)} neprázdných výstupů")
+        
+        # DIRECT SCRIPT CALL - spustíme publish_script přímo bez Temporal
+        try:
+            from datetime import datetime
+            import sys
+            import os
+            import json
+            sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+            from helpers.transformers import transform_to_PublishInput
+            from activities.publish_script import publish_script
+            
+            logger.info("🔧 Spouštím PublishScript přímo jako Python funkci...")
+            logger.info(f"📊 Components keys: {list(components.keys())}")
+            logger.info(f"📊 SEO output sample: {components.get('seo_assistant_output', 'MISSING')[:300]}...")
+            logger.info(f"📊 Draft output sample: {components.get('draft_assistant_output', 'MISSING')[:200]}...")
+            
+            # Debug SEO parsování
+            try:
+                from helpers.transformers import parse_seo_metadata, parse_qa_faq
+                seo_data = parse_seo_metadata(components.get('seo_assistant_output', ''))
+                logger.info(f"🔍 SEO parsováno: title={seo_data.get('title', 'MISSING')}")
+                logger.info(f"🔍 SEO keywords: {seo_data.get('keywords', [])} (count: {len(seo_data.get('keywords', []))})")
+                
+                # Debug QA parsování
+                qa_data = parse_qa_faq(components.get('qa_assistant_output', ''))
+                logger.info(f"🔍 QA parsováno: {len(qa_data)} FAQ položek")
+                logger.info(f"🔍 QA sample: {components.get('qa_assistant_output', 'MISSING')[:500]}...")
+            except Exception as e:
+                logger.error(f"❌ Chyba při parsování: {e}")
+            
+            # Transform pipeline data na PublishInput format - PŘED transformací převeď dict na string
+            logger.info("🔧 Převádím dict objekty na stringy před transformací...")
+            for key, value in components.items():
+                if isinstance(value, dict):
+                    components[key] = json.dumps(value, ensure_ascii=False)
+                    logger.info(f"✅ {key}: dict převeden na JSON string")
+                elif not isinstance(value, str):
+                    components[key] = str(value)
+                    logger.info(f"✅ {key}: {type(value)} převeden na string")
+            
+            # Přidáme current_date pro správný ISO 8601 formát
+            components["current_date"] = components.get("current_date") or __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat().replace('+00:00', 'Z')
+            logger.info(f"✅ current_date nastaven: {components['current_date']}")
+            
+            publish_input = transform_to_PublishInput(components)
+            logger.info(f"📊 Transformace dokončena: {len(publish_input)} položek")
+            
+            # PŘÍMO SPUSTÍME PUBLISH_SCRIPT
+            result = publish_script(publish_input)
+            
+            # DEBUG: Co publish script vrací?
+            logger.info(f"🔍 DEBUG: publish_script vrátil typ: {type(result)}")
+            logger.info(f"🔍 DEBUG: publish_script keys: {list(result.keys()) if isinstance(result, dict) else 'NOT_DICT'}")
+            logger.info(f"🔍 DEBUG: success klíč: {result.get('success', 'MISSING_KEY') if isinstance(result, dict) else 'NOT_DICT'}")
+            logger.info(f"🔍 DEBUG: celý result (první 500 znaků): {str(result)[:500]}")
+            
+            retry_id = f"retry_publish_direct_{workflow_id}_{int(__import__('datetime').datetime.now().timestamp())}"
+            logger.info(f"✅ PublishScript retry dokončen: {retry_id}")
+            logger.info(f"📊 Výsledek: {result.get('success', False)}")
+            
+            # 🔧 KRITICKÁ OPRAVA: Aktualizuj databázi s novými regenerovanými daty
+            logger.info(f"🔍 DEBUG: result.get('success') = {result.get('success')}")
+            logger.info(f"🔍 DEBUG: actual_workflow_id = {actual_workflow_id}")
+            logger.info(f"🔍 DEBUG: actual_run_id = {actual_run_id}")
+            
+            if result.get('success'):
+                try:
+                    logger.info("🔄 Aktualizuji databázi s novými regenerovanými daty...")
+                    
+                    # Načti aktuální workflow data
+                    from temporal_client import get_workflow_result
+                    logger.info("🔍 Volám get_workflow_result...")
+                    current_workflow_data = await get_workflow_result(actual_workflow_id, actual_run_id)
+                    logger.info(f"🔍 Workflow data loaded: {bool(current_workflow_data)}")
+                    
+                    # Debug workflow data structure
+                    logger.info(f"🔍 Workflow data type: {type(current_workflow_data)}")
+                    logger.info(f"🔍 Workflow data keys: {list(current_workflow_data.keys()) if isinstance(current_workflow_data, dict) else 'NOT_DICT'}")
+                    logger.info(f"🔍 Has 'stages' key: {'stages' in current_workflow_data if isinstance(current_workflow_data, dict) else False}")
+                    
+                    # 🔧 OPRAVA: Stages jsou v 'stage_logs', ne 'stages'
+                    stages_key = "stage_logs" if "stage_logs" in current_workflow_data else "stages" 
+                    
+                    # Najdi PublishScript stage a updatuj jeho output
+                    if current_workflow_data and stages_key in current_workflow_data:
+                        stages = current_workflow_data[stages_key]
+                        logger.info(f"🔍 Počet {stages_key}: {len(stages)}")
+                        
+                        # Potřebujeme převést stage_logs na strukturu kompatibilní s frontend
+                        # Frontend očekává 'stages' s 'stage_name' a 'stage_output'
+                        updated_stages = []
+                        
+                        for i, stage_log in enumerate(stages):
+                            stage_name = stage_log.get("stage", "")
+                            logger.info(f"🔍 Stage {i}: {stage_name}")
+                            
+                            # Převod stage_log na frontend formát
+                            stage_frontend = {
+                                "stage": stage_name,  # ✅ OPRAVENO: "stage" místo "stage_name"
+                                "stage_output": stage_log.get("output", ""),
+                                "status": stage_log.get("status", ""),
+                                "start_time": stage_log.get("start_time", ""),
+                                "end_time": stage_log.get("end_time", "")
+                            }
+                            
+                            if "publish" in stage_name.lower():
+                                # Aktualizuj PublishScript output s novými daty
+                                logger.info(f"🎯 Našel jsem PublishScript stage: {stage_name}")
+                                stage_frontend["stage_output"] = result
+                                stage_frontend["output"] = result  # 🔧 OPRAVA: Přidat také 'output' field pro frontend tlačítka
+                                # ✅ KRITICKÁ OPRAVA: Změní status na COMPLETED
+                                if result.get('success'):
+                                    stage_frontend["status"] = "COMPLETED"
+                                    logger.info("✅ PublishScript stage status změněn na COMPLETED")
+                                else:
+                                    stage_frontend["status"] = "FAILED"
+                                    logger.info("❌ PublishScript stage status zůstává FAILED")
+                                logger.info("✅ PublishScript stage output aktualizován")
+                            
+                            updated_stages.append(stage_frontend)
+                        
+                        # Aktualizuj strukturu pro frontend kompatibilitu
+                        current_workflow_data["stages"] = updated_stages
+                        logger.info(f"✅ Převedeno {len(updated_stages)} stages do frontend formátu")
+                        
+                        # 🔧 KRITICKÁ OPRAVA: Synchronizuj stage_logs se stages pro frontend kompatibilitu
+                        # Frontend čte z stage_logs, ale retry aktualizuje stages
+                        if "stage_logs" in current_workflow_data:
+                            current_workflow_data["stage_logs"] = updated_stages.copy()
+                            logger.info(f"✅ Synchronizovány stage_logs se stages pro frontend")
+                        
+                        # Ulož zpět do databáze
+                        await update_workflow_status_in_database(actual_workflow_id, actual_run_id, current_workflow_data)
+                    else:
+                        if not current_workflow_data:
+                            logger.warning("⚠️ current_workflow_data je falsy")
+                        elif "stages" not in current_workflow_data:
+                            logger.warning("⚠️ 'stages' klíč není v current_workflow_data")
+                            logger.warning(f"⚠️ Dostupné klíče: {list(current_workflow_data.keys())}")
+                        else:
+                            logger.warning("⚠️ Neznámý problém s workflow data")
+                        
+                except Exception as e:
+                    logger.error(f"❌ Chyba při aktualizaci databáze: {e}")
+                    import traceback
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                    # Pokračujeme i při chybě - hlavní věc je že retry proběhl
+            else:
+                logger.warning(f"⚠️ Retry result success={result.get('success')} - přeskakuji update databáze")
+            
+            return {
+                "status": "completed" if result.get('success') else "failed",
+                "retry_id": retry_id,
+                "original_workflow_id": workflow_id,
+                "result": result,
+                "message": "PublishScript byl dokončen" if result.get('success') else "PublishScript selhal"
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Chyba při spuštění PublishScript retry: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Chyba při spuštění retry: {str(e)}")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Chyba v retry_publish_script: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Neočekávaná chyba: {str(e)}")
 
 @app.get("/health")
 async def health_check():

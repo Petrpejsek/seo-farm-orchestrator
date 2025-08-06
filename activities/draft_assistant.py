@@ -14,12 +14,7 @@ from datetime import datetime
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-try:
-    from api.database import get_prisma_client
-    DATABASE_AVAILABLE = True
-except ImportError:
-    DATABASE_AVAILABLE = False
-    print("⚠️ Database import failed - using fallback mode")
+from api.database import get_prisma_client
 
 logger = logging.getLogger(__name__)
 
@@ -40,110 +35,55 @@ async def draft_assistant(input_data: Dict[str, Any], assistant_id: Optional[str
     
     logger.info(f"✍️ DraftAssistant vytváří draft z dat: {len(str(input_data))} znaků")
     
-    # Výchozí parametry
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.8,  # Vyšší pro kreativní psaní
-        "top_p": 0.9,
-        "max_tokens": 2000,
-        "system_prompt": "Jsi expert copywriter a content creator. Tvým úkolem je vytvářet kvalitní, poutavé a SEO-optimalizované články na základě poskytnutých dat a briefu. Zaměř se na čitelnost, strukturu a hodnotu pro čtenáře."
-    }
+    # Výchozí parametry - BEZ FALLBACK PROMPTU!
+
     
     # Pokud máme assistant_id, načteme parametry z databáze
-    if assistant_id and DATABASE_AVAILABLE:
+    if assistant_id:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
             
             if assistant:
+                if not all([assistant.model, assistant.temperature is not None, assistant.top_p is not None, assistant.max_tokens, assistant.system_prompt]):
+                    raise Exception(f"❌ Asistent {assistant_id} má neúplnou konfiguraci!")
+                
                 params = {
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
                 }
                 logger.info(f"✅ Načteny parametry asistenta {assistant_id}")
             else:
-                params = default_params
-                logger.warning(f"⚠️ Asistent {assistant_id} nenalezen, používám výchozí parametry")
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů asistenta: {e}")
-            params = default_params
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
     else:
-        params = default_params
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! DraftAssistant nemůže běžet bez databázové konfigurace!")
     
-    # Extrakce dat pro článek
-    brief_data = input_data.get('brief', '')
-    research_data = input_data.get('research_data', {})
-    topic = input_data.get('topic', 'Nespecifikované téma')
-    
-    # Pokud brief je dict, extrahujeme ho
-    if isinstance(brief_data, dict):
-        brief_text = brief_data.get('brief', json.dumps(brief_data, ensure_ascii=False))
-    else:
-        brief_text = str(brief_data)
-    
-    # Pokud research_data jsou string, parsujeme je
-    if isinstance(research_data, str):
-        try:
-            research_data = json.loads(research_data)
-        except:
-            research_data = {"content": research_data}
-    
-    # Sestavení informací pro draft
-    research_summary = ""
-    if isinstance(research_data, dict):
-        if 'key_facts' in research_data:
-            research_summary += f"Klíčová fakta: {', '.join(research_data['key_facts'][:5])}\n"
-        if 'target_audience' in research_data:
-            audience = research_data['target_audience']
-            if isinstance(audience, dict):
-                research_summary += f"Cílová skupina: {audience.get('primary', 'N/A')}\n"
-            else:
-                research_summary += f"Cílová skupina: {audience}\n"
-        if 'content_angles' in research_data:
-            angles = research_data['content_angles']
-            if isinstance(angles, list):
-                research_summary += f"Content angles: {', '.join(angles[:3])}\n"
-    
-    # Prompt pro tvorbu draftu
-    draft_prompt = f"""
-Vytvoř kvalitní článek na základě následujících informací:
-
-TÉMA: {topic}
-
-BRIEF/ZADÁNÍ:
-{brief_text}
-
-RESEARCH DATA:
-{research_summary}
-
-POŽADAVKY NA ČLÁNEK:
-- Délka: 1500-2500 slov
-- Struktura: Úvod, hlavní části s podnadpisy, závěr
-- Styl: Profesionální, ale čitelný a poutavý
-- SEO: Optimalizovaný pro vyhledávače
-- Hodnota: Praktické informace a actionable insights
-
-FORMÁT VÝSTUPU:
-Použij HTML tagy pro strukturu:
-- <h1> pro hlavní nadpis
-- <h2> pro podnadpisy sekcí  
-- <h3> pro podnadpisy podsekcí
-- <p> pro odstavce
-- <ul>/<li> pro seznamy
-- <strong> pro zvýraznění klíčových bodů
-
-Vytvoř kompletní článek, který je připravený k publikaci.
-    """
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Vytvoř článek na základě těchto podkladů:\n\n{str(input_data)[:2000]}..."
     
     try:
+        # Inicializace OpenAI client
+        from utils.api_keys import get_api_key
+        
+        api_key = get_api_key("openai")
+        if not api_key:
+            logger.error("❌ OpenAI API klíč není k dispozici")
+            raise Exception("❌ OpenAI API klíč není k dispozici pro DraftAssistant")
+            
+        client = OpenAI(api_key=api_key)
+        
         # Sestavení zpráv pro OpenAI
         messages = []
         if params["system_prompt"]:
             messages.append({"role": "system", "content": params["system_prompt"]})
-        messages.append({"role": "user", "content": draft_prompt})
+        messages.append({"role": "user", "content": user_message})
         
         # Volání OpenAI API
         logger.info(f"🤖 Volám OpenAI API s modelem {params['model']}")

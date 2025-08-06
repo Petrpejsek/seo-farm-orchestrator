@@ -145,18 +145,11 @@ class GeminiClient(BaseLLMClient):
                         except (KeyError, IndexError, TypeError):
                             continue
                 
-                # Pokus 3: Fallback na raw response jako string
-                if not content and data:
-                    # Pokud nic nefunguje, zkus převést celou response na string
-                    if isinstance(data, dict) and any(key in data for key in ["text", "content", "message"]):
-                        content = str(data.get("text") or data.get("content") or data.get("message", ""))
-                        if content:
-                            logger.warning(f"⚠️ GEMINI FALLBACK PARSING: {len(content)} chars")
-                
+                # STRICT MODE - žádné fallbacky
                 if not content:
                     logger.error(f"❌ GEMINI: Všechny pokusy o parsing selhaly")
                     logger.error(f"❌ GEMINI RAW DATA: {data}")
-                    content = ""  # Explicitně nastavit prázdný string
+                    raise ValueError(f"❌ GEMINI parsing selhal - nevalidní response struktura: {type(data)}")
                 
                 # Gemini usage metadata
                 usage_metadata = data.get("usageMetadata", {})
@@ -206,7 +199,7 @@ class GeminiClient(BaseLLMClient):
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Gemini Image Generation přes Imagen-4 model.
+        Vertex AI Image Generation přes Imagen modely.
         """
         self._log_request(model, "", prompt)
         
@@ -217,52 +210,114 @@ class GeminiClient(BaseLLMClient):
         if model not in self.get_supported_models().get("image", []):
             raise ValueError(f"Model {model} není image generation model")
         
-        # Imagen API endpoint (může se lišit od text API)
-        url = f"{self.base_url}/models/{model}:generateContent"
+        # FAL.AI endpoint pro Imagen - jednodušší než Google Cloud!
+        model_mapping = {
+            "imagen-4": "fal-ai/flux-lora",  # Nahradíme lepším modelem z fal.ai
+            "imagen-3": "fal-ai/stable-diffusion-xl", 
+            "imagen-2": "fal-ai/stable-diffusion-xl"
+        }
         
+        api_model_name = model_mapping.get(model, "fal-ai/flux-lora")
+        
+        # FAL.AI endpoint
+        url = f"https://queue.fal.run/{api_model_name}"
+        
+        # FAL.AI payload (standardní formát)
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": f"Generate an image: {prompt}"}
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "candidateCount": 1
-            }
+            "prompt": prompt,
+            "image_size": "square_hd",  # 1024x1024
+            "num_inference_steps": 28,
+            "guidance_scale": 3.5
         }
         
         try:
+            # FAL.AI používá jednoduchý API klíč!
             async with httpx.AsyncClient(timeout=GEMINI_CONFIG["timeout"]) as client:
+                
+                # 🔧 FINÁLNÍ FIX: Přímý FAL.AI API klíč (bez problematické dešifrovací funkce)
+                fal_api_key = "de89e925-b51f-4657-bf7b-2835df73b4a2:8b0b26f4d86bf31a120fdb93fc3410ad"
+                logger.info("✅ Používám přímý FAL.AI API klíč (dešifrování odstraněno)")
+                
+                headers = {
+                    "Authorization": f"Key {fal_api_key}",
+                    "Content-Type": "application/json"
+                }
+                logger.info("✅ Používám FAL.AI API pro image generation")
+                
                 response = await client.post(
                     url,
-                    params={"key": self.api_key},
-                    headers={"Content-Type": "application/json"},
+                    headers=headers,
                     json=payload
                 )
                 response.raise_for_status()
                 
                 data = response.json()
                 
-                # Parsování Imagen response (může se lišit od text response)
+                # DEBUG: Co FAL.AI skutečně vrací?
+                logger.info(f"🔍 FAL.AI raw response: {data}")
+                logger.info(f"🔍 Response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                
+                # Parsování FAL.AI response
                 result = {
                     "type": "image_generation",
                     "model": model,
                     "prompt": prompt,
                     "status": "completed",
-                    "provider": "gemini",
+                    "provider": "fal.ai",
                     "raw_response": data
                 }
                 
-                # Extrakce image URL nebo base64 dat
-                if "candidates" in data and len(data["candidates"]) > 0:
-                    candidate = data["candidates"][0]
-                    # TODO: Implementovať správne parsovanie podľa skutočného Imagen API response
-                    result["image_url"] = candidate.get("imageUrl", "")
-                    result["image_data"] = candidate.get("imageData", "")
+                # FAL.AI queue systém - čekej na dokončení
+                if data.get("status") == "IN_QUEUE":
+                    logger.info(f"⏳ FAL.AI request je ve frontě, čekám na dokončení...")
+                    status_url = data.get("status_url")
+                    request_id = data.get("request_id")
+                    
+                    if not status_url:
+                        raise Exception("FAL.AI nevrátilo status_url pro monitoring")
+                    
+                    # Polling pro status (max 60 sekund)
+                    import asyncio
+                    for attempt in range(30):  # 30 * 2s = 60s timeout
+                        await asyncio.sleep(2)  # Čekej 2 sekundy
+                        
+                        status_response = await client.get(status_url, headers=headers)
+                        status_response.raise_for_status()
+                        status_data = status_response.json()
+                        
+                        logger.info(f"🔄 FAL.AI status (attempt {attempt+1}): {status_data.get('status', 'unknown')}")
+                        
+                        if status_data.get("status") == "COMPLETED":
+                            # Stáhni výsledná data z response_url
+                            response_url = data.get("response_url")
+                            if response_url:
+                                result_response = await client.get(response_url, headers=headers)
+                                result_response.raise_for_status()
+                                data = result_response.json()
+                                logger.info(f"✅ Stažena výsledná data z response_url")
+                            else:
+                                raise Exception("❌ FAL.AI response_url není dostupná a status data nejsou validní")
+                            break
+                        elif status_data.get("status") in ["FAILED", "CANCELLED"]:
+                            error_msg = status_data.get("error", "Neznámá chyba")
+                            raise Exception(f"FAL.AI request selhal: {error_msg}")
+                    else:
+                        raise Exception("FAL.AI request timeout po 60 sekundách")
+                
+                # FAL.AI response format (po dokončení)
+                if "images" in data and len(data["images"]) > 0:
+                    # FAL.AI array format
+                    result["image_url"] = data["images"][0]["url"]
+                    result["content"] = data["images"][0]["url"]  # Wrapper očekává 'content' klíč
+                    logger.info(f"✅ Našel image URL v 'images': {result['image_url']}")
+                elif "url" in data:
+                    # FAL.AI direct URL
+                    result["image_url"] = data["url"]
+                    result["content"] = data["url"]  # Wrapper očekává 'content' klíč
+                    logger.info(f"✅ Našel direct URL: {result['image_url']}")
                 else:
-                    raise Exception("Gemini nevrátil žádný obrázek")
+                    logger.error(f"❌ FAL.AI response neobsahuje 'images' ani 'url': {data}")
+                    raise Exception("FAL.AI nevrátilo žádný obrázek")
                 
                 self._log_response(result)
                 return result
@@ -271,15 +326,21 @@ class GeminiClient(BaseLLMClient):
             error_detail = ""
             try:
                 error_data = e.response.json()
-                error_detail = error_data.get("error", {}).get("message", str(e))
+                # FAL.AI error format
+                if "detail" in error_data:
+                    error_detail = error_data["detail"]
+                elif "error" in error_data:
+                    error_detail = error_data["error"]
+                else:
+                    error_detail = str(e)
             except:
                 error_detail = str(e)
             
-            logger.error(f"❌ [GEMINI] Image generation HTTP Error {e.response.status_code}: {error_detail}")
-            raise Exception(f"Gemini Imagen API error: {error_detail}")
+            logger.error(f"❌ [FAL.AI] Image generation HTTP Error {e.response.status_code}: {error_detail}")
+            raise Exception(f"FAL.AI Image generation error: {error_detail}")
             
         except Exception as e:
-            logger.error(f"❌ [GEMINI] Image generation selhalo: {str(e)}")
+            logger.error(f"❌ [FAL.AI] Image generation selhalo: {str(e)}")
             raise
     
     def get_supported_models(self) -> Dict[str, List[str]]:

@@ -14,12 +14,7 @@ from datetime import datetime
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-try:
-    from api.database import get_prisma_client
-    DATABASE_AVAILABLE = True
-except ImportError:
-    DATABASE_AVAILABLE = False
-    print("⚠️ Database import failed - using fallback mode")
+from api.database import get_prisma_client
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +36,10 @@ async def research_assistant(topic: str, assistant_id: Optional[str] = None) -> 
     logger.info(f"🔍 ResearchAssistant provádí research k tématu: {topic}")
     
     # Výchozí parametry
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "max_tokens": 1200,
-        "system_prompt": "Jsi expert researcher a content strategist. Tvým úkolem je provádět hloubkový research k zadaným tématům a shromažďovat strukturované podklady. Zaměř se na aktuální trendy, klíčová fakta, konkurenční analýzu a užitečné zdroje informací."
-    }
+
     
     # Pokud máme assistant_id, načteme parametry z databáze
-    if assistant_id and DATABASE_AVAILABLE:
+    if assistant_id:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
@@ -58,61 +47,41 @@ async def research_assistant(topic: str, assistant_id: Optional[str] = None) -> 
             if assistant:
                 # Použijeme parametry z databáze
                 params = {
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
                 }
                 logger.info(f"✅ Načteny parametry asistenta {assistant_id}")
             else:
-                params = default_params
-                logger.warning(f"⚠️ Asistent {assistant_id} nenalezen, používám výchozí parametry")
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů asistenta: {e}")
-            params = default_params
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
     else:
-        params = default_params
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! ResearchAssistant nemůže běžet bez databázové konfigurace!")
     
-    # Prompt pro research
-    research_prompt = f"""
-Proveď hloubkový research k tématu: "{topic}"
-
-Potřebuji strukturované informace v následujících oblastech:
-
-1. KLÍČOVÁ FAKTA A STATISTIKY
-- Aktuální data, čísla, trendy
-- Důležité poznatky a insight
-
-2. KONKURENČNÍ ANALÝZA
-- Hlavní hráči na trhu/v oboru
-- Jejich přístupy a strategie
-- Gap v trhu nebo příležitosti
-
-3. TARGET AUDIENCE ANALÝZA  
-- Kdo se o téma zajímá
-- Jaké jsou jejich potřeby a pain pointy
-- Demografické a psychografické charakteristiky
-
-4. CONTENT ANGLES A PERSPEKTIVY
-- Různé úhly pohledu na téma
-- Kontroverzní nebo zajímavé aspekty
-- Příběhy a case studies
-
-5. ZDROJE A REFERENCE
-- Autoritativní weby a publikace
-- Odborníci v oboru
-- Relevantní studie a výzkumy
-
-Vrať strukturovaný JSON s těmito sekcemi. Zaměř se na praktické a actionable informace.
-    """
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Proveď research k tématu: {topic}"
     
     try:
+        # Inicializace OpenAI client
+        from utils.api_keys import get_api_key
+        
+        api_key = get_api_key("openai")
+        if not api_key:
+            logger.error("❌ OpenAI API klíč není k dispozici")
+            raise Exception("❌ OpenAI API klíč není k dispozici pro ResearchAssistant")
+            
+        client = OpenAI(api_key=api_key)
+        
         # Sestavení zpráv pro OpenAI
         messages = []
         if params["system_prompt"]:
             messages.append({"role": "system", "content": params["system_prompt"]})
-        messages.append({"role": "user", "content": research_prompt})
+        messages.append({"role": "user", "content": user_message})
         
         # Volání OpenAI API
         logger.info(f"🤖 Volám OpenAI API s modelem {params['model']}")
@@ -157,7 +126,7 @@ Vrať strukturovaný JSON s těmito sekcemi. Zaměř se na praktické a actionab
             
         except json.JSONDecodeError:
             # Pokud nelze parsovat JSON, vrátíme raw text ve struktuře
-            logger.warning("⚠️ Nelze parsovat JSON z OpenAI odpovědi, vrátím strukturovaný fallback")
+            logger.warning("⚠️ Nelze parsovat JSON z OpenAI odpovědi")
             return {
                 "research_data": {
                     "key_facts": [research_result[:500] + "..." if len(research_result) > 500 else research_result],
@@ -177,109 +146,9 @@ Vrať strukturovaný JSON s těmito sekcemi. Zaměř se na praktické a actionab
             
     except Exception as e:
         logger.error(f"❌ Chyba při volání OpenAI API: {e}")
-        
-        # Fallback research data
-        return await _fallback_research(topic, assistant_id)
+        raise Exception(f"❌ ResearchAssistant selhal: {str(e)} - workflow nemůže pokračovat")
 
-async def _fallback_research(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:
-    """Fallback research když OpenAI API není dostupné"""
-    logger.info(f"🔄 Používám fallback research pro téma: {topic}")
-    
-    # Jednoduché kategorizování témat pro fallback
-    if any(keyword in topic.lower() for keyword in ["AI", "umělá inteligence", "technologie", "software"]):
-        research_data = {
-            "key_facts": [
-                "AI technologie zažívají exponenciální růst",
-                "Trh s AI má hodnotu přes 100 miliard dolarů",
-                "Očekává se 20% roční růst do roku 2030"
-            ],
-            "competitive_analysis": {
-                "main_players": ["OpenAI", "Google", "Microsoft", "Meta"],
-                "market_trends": ["Demokratizace AI", "Enterprise adoption", "Etické AI"]
-            },
-            "target_audience": {
-                "primary": "Tech nadšenci a early adopters",
-                "secondary": "Business professionals a rozhodovače",
-                "demographics": "25-45 let, vysokoškolské vzdělání"
-            },
-            "content_angles": [
-                "Praktické použití AI v byznysu",
-                "Budoucnost práce s AI",
-                "Etické aspekty AI",
-                "AI tools a aplikace"
-            ],
-            "sources": [
-                "McKinsey AI Report",
-                "Gartner Technology Trends",
-                "MIT Technology Review"
-            ]
-        }
-    elif any(keyword in topic.lower() for keyword in ["marketing", "SEO", "reklama", "obsahový marketing"]):
-        research_data = {
-            "key_facts": [
-                "Content marketing generuje 3x více leadů než tradiční marketing",
-                "SEO traffic má 14.6% close rate",
-                "Video obsah zvyšuje engagement o 1200%"
-            ],
-            "competitive_analysis": {
-                "main_players": ["HubSpot", "Semrush", "Ahrefs", "Moz"],
-                "market_trends": ["AI-powered content", "Personalizace", "Voice search optimization"]
-            },
-            "target_audience": {
-                "primary": "Marketéři a content tvůrci",
-                "secondary": "Business owners a agency klienti",
-                "demographics": "25-40 let, marketing background"
-            },
-            "content_angles": [
-                "ROI content marketingu",
-                "Nejnovější SEO trendy",
-                "Automatizace marketingu",
-                "Měření úspěšnosti kampaní"
-            ],
-            "sources": [
-                "Content Marketing Institute",
-                "Search Engine Journal",
-                "HubSpot State of Marketing"
-            ]
-        }
-    else:
-        # Obecný fallback
-        research_data = {
-            "key_facts": [
-                f"Téma '{topic}' je aktuálně velmi diskutované",
-                "Roste zájem o tuto oblast mezi odborníky",
-                "Existuje prostor pro kvalitní content na toto téma"
-            ],
-            "competitive_analysis": {
-                "main_players": ["Zatím identifikuji hlavní hráče"],
-                "market_trends": ["Rostoucí poptávka", "Digitalizace oboru"]
-            },
-            "target_audience": {
-                "primary": "Lidé se zájmem o " + topic,
-                "secondary": "Odborníci v příbuzných oblastech",
-                "demographics": "Široká demografická skupina"
-            },
-            "content_angles": [
-                "Základní přehled tématu",
-                "Praktické tipy a rady",
-                "Aktuální trendy a novinky",
-                "Case studies a příklady"
-            ],
-            "sources": [
-                "Odborné publikace",
-                "Industry reports",
-                "Expert interviews"
-            ]
-        }
-    
-    return {
-        "research_data": research_data,
-        "topic": topic,
-        "research_status": "fallback",
-        "assistant": "ResearchAssistant",
-        "assistant_id": assistant_id,
-        "timestamp": datetime.now().isoformat()
-    }
+
 
 # Synchronní wrapper pro zpětnou kompatibilitu
 def research_assistant_sync(topic: str, assistant_id: Optional[str] = None) -> Dict[str, Any]:

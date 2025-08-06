@@ -28,77 +28,56 @@ async def qa_assistant(content: str, assistant_id: Optional[str] = None) -> Dict
     
     logger.info(f"✅ QAAssistant kontroluje kvalitu: {len(content)} znaků")
     
-    default_params = {
-        "model": "gpt-4o",
-        "temperature": 0.2,  # Nízká pro precizní analýzu
-        "top_p": 0.9,
-        "max_tokens": 1500,
-        "system_prompt": "Jsi expert na Quality Assurance pro web content. Kontroluješ gramatiku, styl, SEO, UX a celkovou kvalitu obsahu před publikací."
-    }
+    # 🚫 ŽÁDNÉ HARDCODED DEFAULT PROMPTY! Používám POUZE databázi!
+
     
     if assistant_id and DATABASE_AVAILABLE:
         try:
             prisma = await get_prisma_client()
             assistant = await prisma.assistant.find_unique(where={"id": assistant_id})
             if assistant:
-                default_params.update({
-                    "model": assistant.model or default_params["model"],
-                    "temperature": assistant.temperature if assistant.temperature is not None else default_params["temperature"],
-                    "top_p": assistant.top_p if assistant.top_p is not None else default_params["top_p"],
-                    "max_tokens": assistant.max_tokens or default_params["max_tokens"],
-                    "system_prompt": assistant.system_prompt or default_params["system_prompt"]
-                })
+                if not all([assistant.model, assistant.temperature is not None, assistant.top_p is not None, assistant.max_tokens, assistant.system_prompt]):
+                    raise Exception(f"❌ Asistent {assistant_id} má neúplnou konfiguraci!")
+                
+                params = {
+                    "model": assistant.model,
+                    "temperature": assistant.temperature,
+                    "top_p": assistant.top_p,
+                    "max_tokens": assistant.max_tokens,
+                    "system_prompt": assistant.system_prompt
+                }
+            else:
+                raise Exception(f"❌ Asistent {assistant_id} nenalezen v databázi! Workflow MUSÍ selhat!")
         except Exception as e:
             logger.error(f"❌ Chyba při načítání parametrů: {e}")
+            raise Exception(f"❌ Nelze načíst asistenta {assistant_id}: {e}")
+    else:
+        raise Exception("❌ ŽÁDNÝ assistant_id poskytnut! QAAssistant nemůže běžet bez databázové konfigurace!")
     
-    prompt = f"""
-Proveď komplexní QA kontrolu následujícího obsahu:
-
-{content}
-
-Kontroluj tyto oblasti a vrať strukturovaný JSON:
-
-1. GRAMMAR_CHECK:
-   - errors: seznam gramatických chyb
-   - suggestions: návrhy oprav
-   - score: skóre 0-100
-
-2. SEO_ANALYSIS:
-   - title_optimization: analýza nadpisů
-   - meta_tags: kontrola meta tagů
-   - keyword_density: analýza klíčových slov
-   - score: SEO skóre 0-100
-
-3. READABILITY:
-   - sentence_length: analýza délky vět
-   - paragraph_structure: struktura odstavců
-   - clarity: jasnost a srozumitelnost
-   - score: čitelnost 0-100
-
-4. TECHNICAL_CHECK:
-   - html_validation: kontrola HTML
-   - link_check: kontrola odkazů
-   - image_alt_texts: alt texty obrázků
-   - score: technické skóre 0-100
-
-5. OVERALL_ASSESSMENT:
-   - ready_for_publish: true/false
-   - priority_fixes: seznam prioritních oprav
-   - overall_score: celkové skóre 0-100
-
-Vrať pouze JSON bez komentářů.
-    """
+    # Inicializace OpenAI client
+    from utils.api_keys import get_api_key
+    
+    api_key = get_api_key("openai")
+    if not api_key:
+        logger.error("❌ OpenAI API klíč není k dispozici")
+        raise Exception("❌ OpenAI API klíč není k dispozici pro QAAssistant")
+        
+    client = OpenAI(api_key=api_key)
+    
+    # ✅ POUŽÍVÁME POUZE SYSTEM_PROMPT Z DATABÁZE!
+    # Všechny instrukce jsou v databázi jako system_prompt
+    user_message = f"Proveď QA kontrolu následujícího obsahu:\n\n{content}"
     
     try:
         response = client.chat.completions.create(
-            model=default_params["model"],
+            model=params["model"],
             messages=[
-                {"role": "system", "content": default_params["system_prompt"]},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": params["system_prompt"]},
+                {"role": "user", "content": user_message}
             ],
-            temperature=default_params["temperature"],
-            top_p=default_params["top_p"],
-            max_tokens=default_params["max_tokens"]
+            temperature=params["temperature"],
+            top_p=params["top_p"],
+            max_tokens=params["max_tokens"]
         )
         
         result = response.choices[0].message.content.strip()

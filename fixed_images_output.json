@@ -1,0 +1,7 @@
+{
+  "status": "error",
+  "error": "Not in activity context",
+  "error_type": "RuntimeError",
+  "duration": 0.0006561279296875,
+  "activity": "execute_assistant"
+}

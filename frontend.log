@@ -6,12 +6,11 @@
    - Local:        http://localhost:3001
    - Environments: .env.local
 
- ✓ Ready in 3.1s
+ ✓ Ready in 1925ms
  ○ Compiling /page ...
- ✓ Compiled /page in 2s (470 modules)
- ✓ Compiled in 396ms (246 modules)
- ✓ Compiled /workflows/page in 320ms (462 modules)
- ✓ Compiled /workflows/[workflow_id]/[run_id]/page in 381ms (470 modules)
- ○ Compiling /(dashboard)/projects/page ...
- ✓ Compiled /(dashboard)/projects/page in 821ms (476 modules)
- ✓ Compiled /(dashboard)/projects/[project_id]/page in 458ms (482 modules)
+ ✓ Compiled /page in 15.2s (470 modules)
+ ✓ Compiled in 2.9s (246 modules)
+ ○ Compiling /workflows/[workflow_id]/[run_id]/page ...
+ ✓ Compiled /workflows/[workflow_id]/[run_id]/page in 2.3s (464 modules)
+ ✓ Compiled /workflows/page in 280ms (470 modules)
+ ✓ Compiled in 1354ms (476 modules)

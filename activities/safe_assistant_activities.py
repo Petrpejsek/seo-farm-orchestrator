@@ -126,6 +126,10 @@ async def execute_assistant(args: Dict[str, Any]) -> Dict[str, Any]:
     function_key = assistant_config.get("function_key", "unknown")
     
     logger.info(f"🚀 Spouštím asistenta: {assistant_name} ({function_key})")
+    logger.info(f"🔍 DEBUG: function_key='{function_key}', type={type(function_key)}, len={len(str(function_key))}")
+    logger.info(f"🔍 ASSISTANT_CONFIG KEYS: {list(assistant_config.keys())}")
+    if "Publish" in assistant_name:
+        logger.info(f"🔍 PUBLISH_ASSISTANT_CONFIG_FULL: {assistant_config}")
     
     # Validace konfigurace
     required_fields = ["name", "function_key", "model_provider", "model"]
@@ -137,61 +141,231 @@ async def execute_assistant(args: Dict[str, Any]) -> Dict[str, Any]:
     if topic is None:
         raise ValueError("Topic nesmí být None")
     
-    # 🔧 OPRAVA: Topic může být dict z předchozího asistenta - převádíme na string
-    if isinstance(topic, dict):
-        # Pokud je dict, vezmi "output" klíč nebo celý JSON
-        import json
-        topic = topic.get("output", json.dumps(topic, ensure_ascii=False))
-        logger.info(f"🔄 Topic je dict - převádím na string ({len(str(topic))} chars)")
-    elif not isinstance(topic, str):
-        topic = str(topic)
-        logger.info(f"🔄 Topic není string - převádím ({type(topic).__name__} -> str)")
+    # 🔧 OPRAVA: PublishScript deterministický - bez AI!
+    logger.info(f"🔍 KONTROLA: function_key == 'publish_script' ? {function_key == 'publish_script'}")
+    if function_key == "publish_script":
+        # 🔧 DETERMINISTICKÝ PUBLISH SCRIPT - žádné LLM!
+        logger.info(f"🔧 SPOUŠTÍM DETERMINISTICKÝ PUBLISH SCRIPT")
+        
+        # Zajistit dictionary format pro publish_activity
+        if not isinstance(topic, dict):
+            logger.warning(f"⚠️ PublishScript očekává dict, dostal {type(topic).__name__}")
+            topic = {"content": str(topic)}
+        
+        logger.info(f"🎯 PublishScript dostává dictionary s {len(topic)} klíči")
+        
+        # PŘÍMÉ VOLÁNÍ publish_activity místo LLM
+        from activities.publish_activity import publish_activity
+        import asyncio
+        
+        try:
+            # Sestavení dat pro publish_activity
+            # PublishScript potřebuje všechna pipeline data, ne jen výstup ImageRenderer
+            final_outputs = previous_outputs.copy() if previous_outputs else {}
+            if topic and isinstance(topic, dict):
+                # Přidat ImageRenderer výstup do pipeline dat
+                final_outputs["image_renderer_assistant_output"] = topic
+            
+            publish_data = {
+                "assistant_config": assistant_config,
+                "topic": final_outputs,  # Všechna pipeline data místo jen ImageRenderer výstupu
+                "current_date": current_date or datetime.now().isoformat(),
+                "previous_outputs": final_outputs
+            }
+            
+            logger.info(f"🔧 Volám publish_activity s {len(final_outputs)} komponenty")
+            
+            # Přímé async volání publish_activity (již jsme v async kontextu)
+            result = await publish_activity(publish_data)
+            
+            logger.info(f"✅ PublishScript dokončen: {len(str(result))} znaků")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ PublishScript selhal: {e}")
+            raise Exception(f"Deterministický PublishScript selhal: {e}")
+        
+        # Tohle se už nikdy nespustí, ale ponechám pro jistotu
+        user_message = "DETERMINISTICKY_SCRIPT - tento text se nepoužívá"
+        
+    else:
+        # Ostatní asistenti potřebují string
+        if isinstance(topic, dict):
+            # Pokud je dict, vezmi "output" klíč nebo celý JSON
+            import json
+            topic = topic.get("output", json.dumps(topic, ensure_ascii=False))
+            logger.info(f"🔄 Topic je dict - převádím na string ({len(str(topic))} chars)")
+        elif not isinstance(topic, str):
+            topic = str(topic)
+            logger.info(f"🔄 Topic není string - převádím ({type(topic).__name__} -> str)")
+        
+        # Kontrola prázdnosti pouze pro string topics
+        if isinstance(topic, str) and not topic.strip():
+            logger.warning(f"⚠️ Prázdný topic pro {assistant_name} - pokračuji")
+            topic = ""
+        
+        # Příprava user message s datem
+        user_message = topic
+        if current_date:
+            user_message = f"📅 Aktuální datum: {current_date}\n\n{topic}"
     
-    if not topic.strip():
-        logger.warning(f"⚠️ Prázdný topic pro {assistant_name} - pokračuji")
-        topic = ""
-    
-    # Příprava user message s datem
-    user_message = topic
-    if current_date:
-        user_message = f"📅 Aktuální datum: {current_date}\n\n{topic}"
+    # Speciální handling pro QAAssistant - analyzuj obsah ze VŠECH předchozích asistentů
+    if function_key == "qa_assistant" and previous_outputs:
+        # 🔍 DETAILNÍ DEBUGGING - co QA asistent skutečně dostává
+        logger.info(f"🔍 QA ASISTENT DEBUGGING:")
+        logger.info(f"   📦 Dostává {len(previous_outputs)} klíčů v previous_outputs:")
+        for key, value in previous_outputs.items():
+            value_length = len(str(value)) if value else 0
+            logger.info(f"      🗝️ {key}: {value_length} znaků")
+        
+        # Shromaždi obsah k analýze ze VŠECH klíčových asistentů
+        content_to_analyze = []
+        
+        # Definice VŠECH asistentů co QA potřebuje analyzovat (order 1-7, před QA v DB pořadí)
+        assistant_priorities = [
+            # V pořadí podle database order:
+            ("brief_assistant_output", "Brief Assistant", 2000),           # order 1
+            ("research_assistant_output", "Research Assistant", 3000),      # order 2  
+            ("fact_validator_assistant_output", "Fact Validator Assistant", 2000), # order 3
+            ("draft_assistant_output", "Draft Assistant", 5000),            # order 4
+            ("humanizer_assistant_output", "Humanizer Assistant", 5000),    # order 5
+            ("seo_assistant_output", "SEO Assistant", 2000),                # order 6
+            ("multimedia_assistant_output", "Multimedia Assistant", 1500),  # order 7
+            # QA asistent má order 8 (TENTO asistent)
+            # ImageRenderer má order 9 (po QA)
+        ]
+        
+        # Zpracuj všechny dostupné asistenty
+        missing_assistants = []
+        empty_assistants = []
+        
+        for output_key, assistant_name, max_chars in assistant_priorities:
+            if output_key in previous_outputs:
+                output = previous_outputs[output_key]
+                if output and str(output).strip():
+                    output_str = str(output)
+                    if len(output_str) > max_chars:
+                        output_preview = output_str[:max_chars] + f"...\n[ZKRÁCENO z {len(output_str)} znaků]"
+                    else:
+                        output_preview = output_str
+                    content_to_analyze.append(f"=== OBSAH K ANALÝZE Z {assistant_name.upper()} ===\n{output_preview}")
+                    logger.info(f"✅ QA přidal {assistant_name}: {len(output_str)} znaků (zkráceno na {min(len(output_str), max_chars)})")
+                else:
+                    empty_assistants.append(f"{assistant_name} ({output_key})")
+                    logger.warning(f"⚠️ QA asistent má prázdný výstup z {assistant_name} ({output_key})")
+            else:
+                missing_assistants.append(f"{assistant_name} ({output_key})")
+                logger.warning(f"❌ QA asistent nemá klíč {output_key} v previous_outputs")
+        
+        # 🔍 DETAILNÍ ANALÝZA CHYBĚJÍCÍCH DAT
+        if missing_assistants:
+            logger.error(f"❌ QA asistent: CHYBĚJÍCÍ KLÍČE v previous_outputs: {', '.join(missing_assistants)}")
+        if empty_assistants:
+            logger.warning(f"⚠️ QA asistent: PRÁZDNÉ VÝSTUPY z asistentů: {', '.join(empty_assistants)}")
+        
+        if content_to_analyze:
+            # Vytvoř message pro QA analýzu se VŠEMI daty
+            analysis_content = "\n\n".join(content_to_analyze)
+            user_message = f"📅 Aktuální datum: {current_date}\n\nPROVEĎ KOMPLEXNÍ QA KONTROLU tohoto obsahu ze všech asistentů a vrať strukturovanou analýzu ve formátu JSON:\n\n{analysis_content}"
+            logger.info(f"🔍 QA asistent dostává kompletní obsah k analýze: {len(analysis_content)} znaků z {len(content_to_analyze)} asistentů")
+            logger.info(f"📊 QA STATISTIKY: Úspěšných {len(content_to_analyze)}, Prázdných {len(empty_assistants)}, Chybějících {len(missing_assistants)}")
+        else:
+            error_msg = f"QA asistent nenašel obsah k analýze z žádného předchozího asistenta! Chybějící: {missing_assistants}, Prázdné: {empty_assistants}"
+            logger.error(f"❌ {error_msg}")
+            raise ValueError(error_msg)
     
     # Speciální handling pro ImageRendererAssistant - použij data od MultimediaAssistant
-    if function_key == "image_renderer_assistant" and previous_outputs:
-        multimedia_output = previous_outputs.get("MultimediaAssistant", {}).get("output")
+    elif function_key == "image_renderer_assistant" and previous_outputs:
+        multimedia_output = previous_outputs.get("multimedia_assistant_output")
         if multimedia_output:
             try:
-                # MultimediaAssistant nyní vrací nativní objekt, ne string
+                # MultimediaAssistant vrací markdown JSON blok
                 if isinstance(multimedia_output, str):
-                    # Backward compatibility - starší verze vracely string
                     import json
-                    image_prompts = json.loads(multimedia_output)
+                    # Extrakce JSON z markdown bloku (```json\n...\n```)
+                    if "```json" in multimedia_output:
+                        json_start = multimedia_output.find("```json") + 7
+                        json_end = multimedia_output.find("```", json_start)
+                        if json_end != -1:
+                            json_str = multimedia_output[json_start:json_end].strip()
+                            image_prompts = json.loads(json_str)
+                        else:
+                            raise ValueError("Nepoařilo se najít ukončení JSON bloku v MultimediaAssistant výstupu")
+                    else:
+                        raise ValueError("❌ MultimediaAssistant výstup není validní JSON struktura - publish nemůže pokračovat")
                 else:
-                    # Nová verze - nativní objekt
+                    # Nativní objekt
                     image_prompts = multimedia_output
                 
-                if image_prompts and len(image_prompts) > 0:
-                    # Použij první image prompt od MultimediaAssistant
-                    first_prompt = image_prompts[0].get("image_prompt", user_message)
-                    user_message = first_prompt
-                    logger.info(f"🎨 ImageRenderer používá prompt od MultimediaAssistant: {first_prompt[:100]}...")
+                # 🔧 OPRAVA: MultimediaAssistant vrací {primary_visuals: [...], optional_visuals: [...]}
+                # Převod na formát pro ImageRenderer: pole s image_prompt položkami
+                visuals_data = []
+                if "primary_visuals" in image_prompts:
+                    visuals_data.extend(image_prompts["primary_visuals"])
+                if "optional_visuals" in image_prompts:
+                    visuals_data.extend(image_prompts["optional_visuals"])
+                
+                # 🎯 PŘEVOD NA FORMAT PRO IMAGERENDERER
+                formatted_prompts = []
+                for visual in visuals_data:
+                    if "image_prompt" in visual:
+                        formatted_prompts.append(visual["image_prompt"])
+                
+                logger.info(f"🎨 ImageRenderer input: {len(formatted_prompts)} image prompts z MultimediaAssistant")
+                
+                # Předej jako JSON string pro ImageRenderer
+                if formatted_prompts:
+                    # Vytvoř JSON se seznamem promptů
+                    user_message = json.dumps(formatted_prompts, ensure_ascii=False)
                 else:
-                    # ❌ ŽÁDNÉ FALLBACKY - pipeline musí selhat
-                    raise ValueError("MultimediaAssistant nevrátil žádné validní image prompty")
-            except (json.JSONDecodeError, KeyError, AttributeError) as e:
-                # ❌ ŽÁDNÉ FALLBACKY - pipeline musí selhat
-                raise ValueError(f"Chyba při parsování MultimediaAssistant output: {e}")
+                    raise ValueError("❌ MultimediaAssistant neposkytl požadovaná data pro ImageRenderer - publish nemůže pokračovat")
+                
+            except Exception as e:
+                logger.error(f"❌ Chyba při parsování MultimediaAssistant output: {e}")
+                raise ValueError(f"❌ MultimediaAssistant parsování selhalo: {str(e)} - publish nemůže pokračovat")
         else:
-            # ❌ ŽÁDNÉ FALLBACKY - pipeline musí selhat
-            raise ValueError("ImageRenderer nenašel výstup od MultimediaAssistant")
+            raise ValueError("ImageRenderer neobdržel data od MultimediaAssistant")
+    
+    # 🔧 PŘIDÁNO: Speciální handling pro PublishAssistant - očekává dictionary input
+    elif function_key == "publish_script":
+        if isinstance(topic, dict):
+            # PublishAssistant dostává všechny komponenty jako dictionary
+            user_message = topic  # Předej celý dictionary
+            logger.info(f"🎯 PublishAssistant input: dictionary s {len(topic)} komponentami")
+        else:
+            raise ValueError(f"❌ PublishScript očekává dictionary input, ale dostal {type(topic)} - publish nemůže pokračovat")
+    
+    else:
+        # 🔧 OSTATNÍ ASISTENTI: standardní text input s datem  
+        if current_date:
+            user_message = f"📅 Aktuální datum: {current_date}\n\n{topic}"
+        else:
+            user_message = str(topic)
+        
+        if len(str(topic)) > 100:
+            logger.info(f"📝 {assistant_name} input: {len(str(topic))} chars")
     
     # Získání LLM konfigurace
     llm_config = get_llm_config()
-    model_provider = assistant_config.get("model_provider", "openai")
-    model = assistant_config.get("model", "gpt-3.5-turbo")
-    temperature = assistant_config.get("temperature", llm_config.default_temperature)
-    max_tokens = assistant_config.get("max_tokens", llm_config.default_max_tokens)
-    system_prompt = assistant_config.get("system_prompt", "")
+    model_provider = assistant_config.get("model_provider")
+    model = assistant_config.get("model")
+    temperature = assistant_config.get("temperature")
+    max_tokens = assistant_config.get("max_tokens")
+    
+    # 🚫 ŽÁDNÉ DEFAULTY! Všechny hodnoty musí být explicitně nastavené v databázi!
+    if not model_provider:
+        raise Exception(f"❌ CHYBÍ model_provider pro asistenta {assistant_config.get('name', 'unknown')}!")
+    if not model:
+        raise Exception(f"❌ CHYBÍ model pro asistenta {assistant_config.get('name', 'unknown')}!")
+    if temperature is None:
+        raise Exception(f"❌ CHYBÍ temperature pro asistenta {assistant_config.get('name', 'unknown')}!")
+    if max_tokens is None:
+        raise Exception(f"❌ CHYBÍ max_tokens pro asistenta {assistant_config.get('name', 'unknown')}!")
+    system_prompt = assistant_config.get("system_prompt")
+    
+    # 🚫 ŽÁDNÉ FALLBACKY! Pokud system_prompt není v databázi, SELHAT!
+    if not system_prompt or not system_prompt.strip():
+        raise Exception(f"❌ ŽÁDNÝ SYSTEM PROMPT pro asistenta {assistant_config.get('name', 'unknown')}! Musí být v databázi!")
     
     # Speciální handling pro -1 (unlimited)
     if max_tokens == -1:
@@ -207,8 +381,8 @@ async def execute_assistant(args: Dict[str, Any]) -> Dict[str, Any]:
         # Bezpečné LLM volání - rozpoznání typu modelu
         start_time = datetime.now()
         
-        # Detekce image modelů (DALL-E) - SPECIÁLNÍ HANDLING PRO IMAGERENDERER
-        image_models = ["dall-e-3", "dall-e-2", "dall-e"]
+        # Detekce image modelů (DALL-E + Google Imagen) - SPECIÁLNÍ HANDLING PRO IMAGERENDERER
+        image_models = ["dall-e-3", "dall-e-2", "dall-e", "imagen-4", "imagen-3", "imagen"]
         is_image_model = any(img_model in model.lower() for img_model in image_models)
         
         if is_image_model and function_key == "image_renderer_assistant":
@@ -252,54 +426,46 @@ async def execute_assistant(args: Dict[str, Any]) -> Dict[str, Any]:
                 for i, prompt in enumerate(image_prompts):
                     logger.info(f"🎨 Generuji obrázek {i+1}/{len(image_prompts)}: {prompt[:100]}...")
                     
-                    # Tři pokusy pro každý obrázek
-                    llm_result = None
-                    last_error = None
-                    
-                    for attempt in range(3):
-                        try:
-                            activity.heartbeat()
-                            logger.info(f"🤖 IMAGE pokus {attempt + 1}/3 pro prompt {i+1}: {model_provider}/{model}")
+                    # Použij safe_llm_call pro image generation
+                    try:
+                        logger.info(f"🤖 IMAGE generace pro prompt {i+1}: {model_provider}/{model}")
+                        
+                        llm_result = await safe_llm_call(
+                            llm_func=llm_client.image_generation,
+                            provider=model_provider,
+                            model=model,
+                            prompt=prompt,
+                            size="1024x1024",
+                            quality="standard",
+                            style="vivid",
+                            max_retries=3
+                        )
+                        
+                        if not llm_result or "content" not in llm_result:
+                            raise Exception(f"Image generation vrátil nevalidní response: {llm_result}")
                             
-                            llm_result = await llm_client.image_generation(
-                                prompt=prompt,
-                                size="1024x1024",
-                                quality="standard", 
-                                style="vivid"
-                            )
-                            
-                            if llm_result and "content" in llm_result:
-                                logger.info(f"✅ IMAGE úspěch pro prompt {i+1}: {model_provider}/{model}")
-                                break
-                            else:
-                                raise Exception(f"Image generation vrátil nevalidní response: {llm_result}")
-                                
-                        except Exception as e:
-                            last_error = e
-                            logger.warning(f"⚠️ IMAGE pokus {attempt + 1} pro prompt {i+1} selhal: {str(e)}")
-                            if attempt < 2:
-                                await asyncio.sleep(2 ** attempt)
-                    
-                    if not llm_result or "content" not in llm_result:
-                        logger.error(f"❌ Image generation selhal pro prompt {i+1}: {last_error}")
+                        logger.info(f"✅ IMAGE úspěch pro prompt {i+1}: {model_provider}/{model}")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Image generation selhal pro prompt {i+1}: {str(e)}")
                         # Přidej chybný obrázek místo exception
                         generated_images.append({
                             "url": "",
                             "prompt": prompt,
                             "status": "failed",
-                            "error": f"DALL-E generation failed: {last_error}"
+                            "error": f"Image generation failed: {str(e)}"
                         })
                         continue
                     
                     # Extrahuj URL z response
-                    image_url = await _extract_url_from_dalle_response(llm_result)
+                    image_url = await _extract_url_from_image_response(llm_result)
                     if not image_url:
-                        logger.warning(f"⚠️ Žádná URL nalezena v DALL-E response pro prompt {i+1}")
+                        logger.warning(f"⚠️ Žádná URL nalezena v image response pro prompt {i+1}")
                         generated_images.append({
                             "url": "",
                             "prompt": prompt,
                             "status": "failed",
-                            "error": "No URL found in DALL-E response"
+                            "error": "No URL found in image response"
                         })
                         continue
                     
@@ -366,36 +532,20 @@ async def execute_assistant(args: Dict[str, Any]) -> Dict[str, Any]:
             # Pro ostatní image modely (pokud nějaké jsou)
             logger.info(f"🎨 OBECNÝ IMAGE GENERATION: model={model}")
             
-            # Tři pokusy pro image generation
-            llm_result = None
-            last_error = None
-            
-            for attempt in range(3):
-                try:
-                    activity.heartbeat()
-                    logger.info(f"🤖 IMAGE pokus {attempt + 1}/3: {model_provider}/{model}")
-                    
-                    llm_result = await llm_client.image_generation(
-                        prompt=user_message,
-                        size="1024x1024",
-                        quality="standard", 
-                        style="vivid"
-                    )
-                    
-                    if llm_result and "content" in llm_result:
-                        logger.info(f"✅ IMAGE úspěch: {model_provider}/{model}")
-                        break
-                    else:
-                        raise Exception(f"Image generation vrátil nevalidní response: {llm_result}")
-                        
-                except Exception as e:
-                    last_error = e
-                    logger.warning(f"⚠️ IMAGE pokus {attempt + 1} selhal: {str(e)}")
-                    if attempt < 2:
-                        await asyncio.sleep(2 ** attempt)
+            # Použij safe_llm_call pro image generation
+            llm_result = await safe_llm_call(
+                llm_func=llm_client.image_generation,
+                provider=model_provider,
+                model=model,
+                prompt=user_message,
+                size="1024x1024",
+                quality="standard",
+                style="vivid",
+                max_retries=3
+            )
             
             if not llm_result or "content" not in llm_result:
-                raise Exception(f"Image generation selhalo po 3 pokusech. Poslední chyba: {last_error}")
+                raise Exception(f"Image generation selhalo - nevalidní response: {llm_result}")
         else:
             # Pro text modely používáme chat_completion API
             llm_result = await safe_llm_call(
@@ -530,23 +680,23 @@ async def _extract_image_prompts_from_input(user_message: str) -> list:
         logger.error(f"❌ Chyba při extrakci image_prompts: {e}")
         return []
 
-async def _extract_url_from_dalle_response(dalle_response: dict) -> str:
+async def _extract_url_from_image_response(image_response: dict) -> str:
     """
-    Extrahuje URL z DALL-E API response.
+    Extrahuje URL z image API response.
     
     Args:
-        dalle_response: Response z DALL-E API
+        image_response: Response z image API
         
     Returns:
         URL obrázku nebo None
     """
     try:
-        logger.info(f"🔍 Extrakce URL z DALL-E response: {type(dalle_response)}")
+        logger.info(f"🔍 Extrakce URL z image response: {type(image_response)}")
         
-        if isinstance(dalle_response, dict):
+        if isinstance(image_response, dict):
             # Zkus content.url structure
-            if "content" in dalle_response:
-                content = dalle_response["content"]
+            if "content" in image_response:
+                content = image_response["content"]
                 if isinstance(content, str):
                     # Je to string s URL - extrahni pomocí regex
                     import re
@@ -562,12 +712,12 @@ async def _extract_url_from_dalle_response(dalle_response: dict) -> str:
                         return item["url"]
             
             # Zkus přímou URL
-            if "url" in dalle_response:
-                logger.info(f"✅ URL nalezena přímo: {dalle_response['url'][:100]}...")
-                return dalle_response["url"]
+            if "url" in image_response:
+                logger.info(f"✅ URL nalezena přímo: {image_response['url'][:100]}...")
+                return image_response["url"]
         
-        logger.warning(f"⚠️ Žádná URL nenalezena v DALL-E response")
-        logger.warning(f"⚠️ Response structure: {dalle_response}")
+        logger.warning(f"⚠️ Žádná URL nenalezena v image response")
+        logger.warning(f"⚠️ Response structure: {image_response}")
         return None
         
     except Exception as e:

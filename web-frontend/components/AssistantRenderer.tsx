@@ -197,7 +197,7 @@ const AssistantCard: React.FC<AssistantCardProps> = ({
                 <h5 className="font-semibold text-gray-900">📤 Výstup:</h5>
                 
                 {/* Special handling for ImageRendererAssistant */}
-                {assistant.apiType === 'DALLE' && (() => {
+                {(assistant.apiType === 'IMAGE' || assistant.apiType === 'DALLE' || assistant.name === 'ImageRendererAssistant') && (() => {
                   const { images, hasImages } = parseImageOutput(stage.output);
                   if (hasImages) {
                     return (
@@ -238,7 +238,7 @@ const AssistantCard: React.FC<AssistantCardProps> = ({
 };
 
 /**
- * Hlavní komponenta pro zobrazení všech 10 asistentů v pipeline
+ * Hlavní komponenta pro zobrazení všech 9 asistentů v pipeline
  */
 const AssistantRenderer: React.FC<AssistantRendererProps> = ({
   stages,
@@ -285,7 +285,7 @@ const AssistantRenderer: React.FC<AssistantRendererProps> = ({
       {showProgress && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-gray-900">🤖 Pipeline asistentů (10)</h3>
+            <h3 className="text-2xl font-bold text-gray-900">🤖 Pipeline asistentů (9)</h3>
             <div className="text-right">
               <div className="text-2xl font-bold text-gray-900">
                 {completedCount}/{assistants.length || sortedStages.length}

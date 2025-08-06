@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# ⚠️  WARNING: Worker se spouští výhradně přes master_worker_manager.sh
+# ⚠️  TENTO SKRIPT NESPOUŠTÍ TEMPORAL WORKER!
+# ⚠️  Pro worker použij: ./master_worker_manager.sh start
+
 echo "🚀 Spouštím SEO Farm Orchestrator: frontend + backend..."
 
 # Spuštění backendu (FastAPI)
