@@ -39,7 +39,7 @@ export default function WorkflowsPage() {
       
       // ✅ OPRAVENO: Používáme databázový endpoint místo Temporal serveru
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-      const apiUrl = `${apiBaseUrl}/api/workflow-runs?limit=50`;
+      const apiUrl = `${apiBaseUrl}/api/workflow-runs?limit=500`;
       console.log('🌐 DEBUG: Full API URL:', apiUrl);
       
       const response = await fetch(apiUrl)

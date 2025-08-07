@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field
 from temporal_client import start_seo_pipeline, list_workflows, get_workflow_result, describe_workflow_execution, terminate_workflow
 
 # Import nových API routerů
-from api.routes.project import router as project_router
-from api.routes.assistant import router as assistant_router
-from api.routes.workflow_run import router as workflow_run_router
-from api.routes.api_keys import router as api_keys_router
+from backend.api.routes.project import router as project_router
+from backend.api.routes.assistant import router as assistant_router
+from backend.api.routes.workflow_run import router as workflow_run_router
+from backend.api.routes.api_keys import router as api_keys_router
 
 # Import databázového připojení
 from api.database import connect_database, disconnect_database
@@ -247,7 +247,7 @@ async def batch_pipeline_run(request: BatchPipelineRequest):
                 workflow_ids.append(workflow_id)
                 
                 # Vytvoření databázového záznamu
-                from api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
+                from backend.api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
                 
                 workflow_run_data = WorkflowRunCreate(
                     projectId=request.project_id,
@@ -342,7 +342,7 @@ async def pipeline_run(request: PipelineRequest):
         if request.project_id:
             try:
                 # Import WorkflowRunCreate modelu a create_workflow_run funkce
-                from api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
+                from backend.api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
                 
                 # Vytvoření záznamu workflow run v databázi
                 workflow_run_data = WorkflowRunCreate(
@@ -628,7 +628,7 @@ async def update_workflow_status_in_database(workflow_id: str, run_id: str, resu
         result_data: Výsledek z get_workflow_result
     """
     try:
-        from api.routes.workflow_run import get_prisma_client
+        from backend.api.routes.workflow_run import get_prisma_client
         from datetime import datetime
         
 

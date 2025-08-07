@@ -183,7 +183,7 @@ export default function ProjectDetailPage() {
   // Načtení workflow běhů
   const fetchWorkflowRuns = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/workflow-runs?project_id=${projectId}&limit=20`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/workflow-runs?project_id=${projectId}&limit=500`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

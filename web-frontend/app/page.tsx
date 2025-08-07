@@ -34,7 +34,7 @@ export default function Home() {
       setProjects(projectsData);
       
       // Načtení skutečných workflow z databáze
-      const workflowsResponse = await fetch(`${apiBaseUrl}/api/workflow-runs?limit=50`);
+      const workflowsResponse = await fetch(`${apiBaseUrl}/api/workflow-runs?limit=500`);
       const workflowsData = await workflowsResponse.json();
       console.log('⚙️ DEBUG: Workflows response:', workflowsData);
       console.log('📋 DEBUG: Workflows array:', workflowsData);
