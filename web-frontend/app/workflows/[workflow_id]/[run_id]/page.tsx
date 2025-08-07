@@ -88,44 +88,11 @@ const parseImageOutput = (output: any): { images: any[], hasImages: boolean } =>
 const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) => {
   if (!isOpen) return null;
 
-  // Function to copy output to clipboard with fallback
+  // Function to copy output to clipboard - NO FALLBACKS
   const copyOutput = async () => {
-    try {
-      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-      
-      // Try modern clipboard API first (works on HTTPS/localhost)
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textToCopy);
-        alert('✅ Výstup zkopírován do schránky!');
-        console.log('✅ Výstup zkopírován do clipboardu (modern API)');
-        return;
-      }
-      
-      // Fallback for HTTP sites - create temporary textarea
-      const textarea = document.createElement('textarea');
-      textarea.value = textToCopy;
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-999999px';
-      textarea.style.top = '-999999px';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      
-      if (successful) {
-        alert('✅ Výstup zkopírován do schránky!');
-        console.log('✅ Výstup zkopírován do clipboardu (fallback)');
-      } else {
-        throw new Error('Kopírování selhalo');
-      }
-    } catch (err) {
-      console.error('❌ Chyba při kopírování:', err);
-      // Show text in prompt as last resort
-      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-      prompt('❌ Kopírování selhalo. Zkopírujte text ručně:', textToCopy);
-    }
+    const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+    await navigator.clipboard.writeText(textToCopy);
+    alert('✅ Výstup zkopírován do schránky!');
   };
 
   // Function to render image previews
@@ -592,44 +559,11 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    try {
-                      const content = typeof (stage.output || stage.stage_output) === 'string' 
-                        ? (stage.output || stage.stage_output)
-                        : JSON.stringify((stage.output || stage.stage_output), null, 2);
-                      
-                      // Try modern clipboard API first (works on HTTPS/localhost)
-                      if (navigator.clipboard && window.isSecureContext) {
-                        await navigator.clipboard.writeText(content);
-                        alert('✅ Výstup zkopírován do schránky!');
-                        return;
-                      }
-                      
-                      // Fallback for HTTP sites - create temporary textarea
-                      const textarea = document.createElement('textarea');
-                      textarea.value = content;
-                      textarea.style.position = 'fixed';
-                      textarea.style.left = '-999999px';
-                      textarea.style.top = '-999999px';
-                      document.body.appendChild(textarea);
-                      textarea.focus();
-                      textarea.select();
-                      
-                      const successful = document.execCommand('copy');
-                      document.body.removeChild(textarea);
-                      
-                      if (successful) {
-                        alert('✅ Výstup zkopírován do schránky!');
-                      } else {
-                        throw new Error('Kopírování selhalo');
-                      }
-                    } catch (err) {
-                      console.error('❌ Chyba při kopírování:', err);
-                      // Show text in prompt as last resort
-                      const content = typeof (stage.output || stage.stage_output) === 'string' 
-                        ? (stage.output || stage.stage_output)
-                        : JSON.stringify((stage.output || stage.stage_output), null, 2);
-                      prompt('❌ Kopírování selhalo. Zkopírujte text ručně:', content);
-                    }
+                    const content = typeof (stage.output || stage.stage_output) === 'string' 
+                      ? (stage.output || stage.stage_output)
+                      : JSON.stringify((stage.output || stage.stage_output), null, 2);
+                    await navigator.clipboard.writeText(content);
+                    alert('✅ Výstup zkopírován do schránky!');
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
                 >
