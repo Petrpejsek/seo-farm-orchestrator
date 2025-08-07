@@ -37,9 +37,9 @@ export default function WorkflowsPage() {
       console.log('🔍 DEBUG: Načítám workflows z API...');
       console.log('🔗 API BASE URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
       
-      // ✅ OPRAVENO: Používáme stejný endpoint jako homepage + fallback URL
+      // ✅ OPRAVENO: Používáme databázový endpoint místo Temporal serveru
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-      const apiUrl = `${apiBaseUrl}/api/workflows?limit=50`;
+      const apiUrl = `${apiBaseUrl}/api/workflow-runs?limit=50`;
       console.log('🌐 DEBUG: Full API URL:', apiUrl);
       
       const response = await fetch(apiUrl)
@@ -52,8 +52,8 @@ export default function WorkflowsPage() {
       const data = await response.json()
       console.log('⚙️ DEBUG: Workflows response:', data);
       
-      // ✅ OPRAVENO: Backend vrací {workflows: [...]} object
-      const workflowsArray = data.workflows || []
+      // ✅ OPRAVENO: Databázový API vrací array přímo
+      const workflowsArray = Array.isArray(data) ? data : []
       console.log('📋 DEBUG: Workflows array:', workflowsArray);
       console.log('📋 DEBUG: Array length:', workflowsArray.length);
       

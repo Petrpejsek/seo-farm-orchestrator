@@ -33,23 +33,25 @@ export default function Home() {
       console.log('📁 DEBUG: Projects data:', projectsData);
       setProjects(projectsData);
       
-      // Načtení skutečných workflow z API
-      const workflowsResponse = await fetch(`${apiBaseUrl}/api/workflows?limit=50`);
+      // Načtení skutečných workflow z databáze
+      const workflowsResponse = await fetch(`${apiBaseUrl}/api/workflow-runs?limit=50`);
       const workflowsData = await workflowsResponse.json();
       console.log('⚙️ DEBUG: Workflows response:', workflowsData);
-      console.log('📋 DEBUG: Workflows array:', workflowsData.workflows);
+      console.log('📋 DEBUG: Workflows array:', workflowsData);
+      
+      const workflowsArray = Array.isArray(workflowsData) ? workflowsData : [];
       
       setRecentStats({
         projectCount: projectsData.length,
         assistantCount: projectsData.reduce((sum: number, p: any) => sum + p.assistantCount, 0),
-        workflowCount: workflowsData.workflows ? workflowsData.workflows.length : 0, // Opraveno - skutečný počet workflow
-        recentWorkflows: workflowsData.workflows || []
+        workflowCount: workflowsArray.length,
+        recentWorkflows: workflowsArray.slice(0, 5)
       });
       
       console.log('✅ DEBUG: Final recentStats:', {
         projectCount: projectsData.length,
-        workflowCount: workflowsData.workflows ? workflowsData.workflows.length : 0,
-        recentWorkflows: workflowsData.workflows || []
+        workflowCount: workflowsArray.length,
+        recentWorkflows: workflowsArray.slice(0, 5)
       });
     } catch (err) {
       console.error('❌ DEBUG: Error fetching stats:', err);

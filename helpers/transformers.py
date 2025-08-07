@@ -577,16 +577,18 @@ def transform_to_PublishInput(pipeline_data: Dict[str, Any]) -> Dict[str, Any]:
     # 1. SEO metadata - validace již proběhla v parse_seo_metadata
     seo_data = parse_seo_metadata(seo_output)
     
-    # 2. Content HTML - POUZE humanizer_output_after_fact_validation, ŽÁDNÉ FALLBACKY!
-    # ✅ POUŽÍVÁ VÝHRADNĚ verzi humanizer_output_after_fact_validation
-    if not humanizer_validated:
-        raise ValueError("❌ CHYBÍ humanizer_output_after_fact_validation - publish nemůže pokračovat bez validovaného obsahu")
+    # 2. Content HTML - PRIORITY: humanizer_output_after_fact_validation, FALLBACK: humanizer_assistant_output
+    # ✅ KOMPATIBILITA s novým i starým systémem pipeline
+    if humanizer_validated:
+        content_html = humanizer_validated
+        logger.info(f"✅ Content HTML načten z humanizer_output_after_fact_validation: {len(content_html)} znaků")
+    elif humanizer_output:
+        content_html = humanizer_output  
+        logger.info(f"✅ Content HTML načten z humanizer_assistant_output: {len(content_html)} znaků")
+    else:
+        raise ValueError("❌ CHYBÍ humanizer_output_after_fact_validation NEBO humanizer_assistant_output - publish nemůže pokračovat bez obsahu")
     
-    content_html = humanizer_validated
-    
-    from logger import get_logger
-    logger = get_logger(__name__)
-    logger.info(f"✅ Content HTML načten VÝHRADNĚ z humanizer_output_after_fact_validation: {len(content_html)} znaků")
+
     
     # Ujisti se, že content má <article> wrapper
     if '<article>' not in content_html.lower():

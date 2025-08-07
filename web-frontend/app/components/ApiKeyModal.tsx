@@ -9,8 +9,10 @@ interface ApiKeyModalProps {
 
 export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const [openaiKey, setOpenaiKey] = useState('')
+  const [claudeKey, setClaudeKey] = useState('')
+  const [geminiKey, setGeminiKey] = useState('')
   const [falKey, setFalKey] = useState('')
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'fal'>('openai')
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'claude' | 'gemini' | 'fal'>('openai')
   const [loading, setLoading] = useState(false)
   const [loadingKeys, setLoadingKeys] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
@@ -43,6 +45,8 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     // Reset formulář při otevření
     if (isOpen) {
       setOpenaiKey('')
+      setClaudeKey('')
+      setGeminiKey('')
       setFalKey('')
       setSelectedProvider('openai')
       setError(null)
@@ -53,7 +57,22 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const currentKey = selectedProvider === 'openai' ? openaiKey : falKey
+    let currentKey = ''
+    
+    switch (selectedProvider) {
+      case 'openai':
+        currentKey = openaiKey
+        break
+      case 'claude':
+        currentKey = claudeKey
+        break
+      case 'gemini':
+        currentKey = geminiKey
+        break
+      case 'fal':
+        currentKey = falKey
+        break
+    }
     
     if (!currentKey.trim()) {
       setError('API klíč nemůže být prázdný')
@@ -68,6 +87,20 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
       }
       if (openaiKey.length < 20) {
         setError('OpenAI API klíč je příliš krátký (minimum 20 znaků)')
+        return
+      }
+    } else if (selectedProvider === 'claude') {
+      if (!claudeKey.startsWith('sk-ant-')) {
+        setError('Anthropic Claude API klíč musí začínat "sk-ant-"')
+        return
+      }
+      if (claudeKey.length < 20) {
+        setError('Claude API klíč je příliš krátký (minimum 20 znaků)')
+        return
+      }
+    } else if (selectedProvider === 'gemini') {
+      if (geminiKey.length < 10) {
+        setError('Google Gemini API klíč je příliš krátký (minimum 10 znaků)')
         return
       }
     } else if (selectedProvider === 'fal') {
@@ -112,6 +145,10 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
         // Reset správný klíč podle provideru
         if (selectedProvider === 'openai') {
           setOpenaiKey('')
+        } else if (selectedProvider === 'claude') {
+          setClaudeKey('')
+        } else if (selectedProvider === 'gemini') {
+          setGeminiKey('')
         } else if (selectedProvider === 'fal') {
           setFalKey('')
         }
@@ -222,11 +259,13 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
               <select
                 id="provider"
                 value={selectedProvider}
-                onChange={(e) => setSelectedProvider(e.target.value as 'openai' | 'fal')}
+                onChange={(e) => setSelectedProvider(e.target.value as 'openai' | 'claude' | 'gemini' | 'fal')}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               >
                 <option value="openai">🤖 OpenAI</option>
+                <option value="claude">🧠 Anthropic Claude</option>
+                <option value="gemini">💎 Google Gemini</option>
                 <option value="fal">⚡ FAL.AI</option>
               </select>
             </div>
@@ -234,20 +273,37 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
             {/* API Key input */}
             <div>
               <label htmlFor="api-key" className="block text-sm font-medium text-gray-700 mb-2">
-                {selectedProvider === 'openai' ? 'OpenAI API Key' : 'FAL.AI API Key'}
+                {selectedProvider === 'openai' && 'OpenAI API Key'}
+                {selectedProvider === 'claude' && 'Anthropic Claude API Key'}
+                {selectedProvider === 'gemini' && 'Google Gemini API Key'}
+                {selectedProvider === 'fal' && 'FAL.AI API Key'}
               </label>
               <input
                 id="api-key"
                 type="password"
-                value={selectedProvider === 'openai' ? openaiKey : falKey}
+                value={
+                  selectedProvider === 'openai' ? openaiKey :
+                  selectedProvider === 'claude' ? claudeKey :
+                  selectedProvider === 'gemini' ? geminiKey :
+                  falKey
+                }
                 onChange={(e) => {
                   if (selectedProvider === 'openai') {
                     setOpenaiKey(e.target.value)
+                  } else if (selectedProvider === 'claude') {
+                    setClaudeKey(e.target.value)
+                  } else if (selectedProvider === 'gemini') {
+                    setGeminiKey(e.target.value)
                   } else {
                     setFalKey(e.target.value)
                   }
                 }}
-                                    placeholder={selectedProvider === 'openai' ? 'sk-...' : 'fal-xxx nebo uuid:hash'}
+                placeholder={
+                  selectedProvider === 'openai' ? 'sk-...' :
+                  selectedProvider === 'claude' ? 'sk-ant-...' :
+                  selectedProvider === 'gemini' ? 'AIza...' :
+                  'fal-xxx nebo uuid:hash'
+                }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               />
