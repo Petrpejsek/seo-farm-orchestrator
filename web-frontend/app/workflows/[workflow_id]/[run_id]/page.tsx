@@ -713,9 +713,29 @@ const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAs
 export default function WorkflowDetailPage() {
   const params = useParams()
   
-  // Decode URL parameters properly to handle special characters
+  // Validate and decode URL parameters
+  if (!params.workflow_id || !params.run_id) {
+    console.error('❌ CRITICAL: Missing URL parameters:', { params });
+    return (
+      <div className="p-8">
+        <div className="text-red-600">
+          <h1>Chyba URL parametrů</h1>
+          <p>Workflow ID nebo Run ID nejsou v URL definovány.</p>
+          <p>Parametry: {JSON.stringify(params)}</p>
+        </div>
+      </div>
+    );
+  }
+  
   const workflow_id = decodeURIComponent(params.workflow_id as string)
   const run_id = decodeURIComponent(params.run_id as string)
+  
+  console.log('🔍 PARAMS DEBUG:', {
+    raw_workflow_id: params.workflow_id,
+    raw_run_id: params.run_id,
+    decoded_workflow_id: workflow_id,
+    decoded_run_id: run_id
+  });
 
   const [workflowData, setWorkflowData] = useState<WorkflowResult | null>(null)
   const [assistantOrder, setAssistantOrder] = useState<string[]>([])
@@ -811,6 +831,19 @@ export default function WorkflowDetailPage() {
 
   const fetchWorkflowResult = async () => {
     try {
+      // Validate IDs before API call
+      if (!workflow_id || !run_id || workflow_id === 'undefined' || run_id === 'undefined') {
+        console.error('❌ CRITICAL: Invalid workflow/run IDs:', {
+          workflow_id,
+          run_id,
+          type_workflow: typeof workflow_id,
+          type_run: typeof run_id
+        });
+        setError(`Neplatné parametry: workflow_id="${workflow_id}", run_id="${run_id}"`);
+        setLoading(false);
+        return;
+      }
+      
       // Debug logging
       console.log('🔍 Debug - Fetching workflow:', {
         raw_workflow_id: params.workflow_id,
@@ -823,8 +856,14 @@ export default function WorkflowDetailPage() {
       const encodedWorkflowId = encodeURIComponent(workflow_id)
       const encodedRunId = encodeURIComponent(run_id)
       
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-      console.log('🔍 DEBUG: apiBaseUrl =', apiBaseUrl);
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+      if (!apiBaseUrl) {
+        console.error('❌ CRITICAL: NEXT_PUBLIC_API_BASE_URL není nastaveno!');
+        setError('Systémová chyba: API URL není nakonfigurováno');
+        setLoading(false);
+        return;
+      }
+      console.log('✅ Using API Base URL:', apiBaseUrl);
       const apiUrl = `${apiBaseUrl}/api/workflow-result/${encodedWorkflowId}/${encodedRunId}`
       console.log('🌐 API URL:', apiUrl)
       
