@@ -1163,6 +1163,13 @@ export default function WorkflowDetailPage() {
           <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <span>Načítám detail workflow...</span>
         </div>
+        <div className="mt-4 p-4 bg-gray-100 text-sm">
+          <h3>🔍 DEBUG INFO:</h3>
+          <p><strong>NEXT_PUBLIC_API_BASE_URL:</strong> {process.env.NEXT_PUBLIC_API_BASE_URL || 'UNDEFINED'}</p>
+          <p><strong>workflow_id:</strong> {workflow_id}</p>
+          <p><strong>run_id:</strong> {run_id}</p>
+          <p><strong>Params raw:</strong> {JSON.stringify(params)}</p>
+        </div>
       </div>
     )
   }
