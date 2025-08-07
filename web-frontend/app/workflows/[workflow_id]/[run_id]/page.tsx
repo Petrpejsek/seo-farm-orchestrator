@@ -713,28 +713,49 @@ const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAs
 export default function WorkflowDetailPage() {
   const params = useParams()
   
-  // Validate and decode URL parameters
-  if (!params.workflow_id || !params.run_id) {
-    console.error('❌ CRITICAL: Missing URL parameters:', { params });
-    return (
-      <div className="p-8">
-        <div className="text-red-600">
-          <h1>Chyba URL parametrů</h1>
-          <p>Workflow ID nebo Run ID nejsou v URL definovány.</p>
-          <p>Parametry: {JSON.stringify(params)}</p>
-        </div>
-      </div>
-    );
+  // FALLBACK: Extract parameters from window.location if useParams fails
+  const getUrlParams = () => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      console.log('🔍 WINDOW PATH:', path);
+      
+      // Extract from path: /workflows/[workflow_id]/[run_id]
+      const matches = path.match(/\/workflows\/([^\/]+)\/([^\/]+)/);
+      if (matches) {
+        return {
+          workflow_id: decodeURIComponent(matches[1]),
+          run_id: decodeURIComponent(matches[2])
+        };
+      }
+    }
+    return { workflow_id: null, run_id: null };
+  };
+  
+  // Try useParams first, fallback to window.location
+  let workflow_id = params.workflow_id as string;
+  let run_id = params.run_id as string;
+  
+  if (!workflow_id || !run_id || workflow_id === 'undefined' || run_id === 'undefined') {
+    console.log('❌ useParams() failed, trying window.location fallback');
+    const urlParams = getUrlParams();
+    workflow_id = urlParams.workflow_id || 'undefined';
+    run_id = urlParams.run_id || 'undefined';
   }
   
-  const workflow_id = decodeURIComponent(params.workflow_id as string)
-  const run_id = decodeURIComponent(params.run_id as string)
+  // Decode if not already decoded
+  if (workflow_id && workflow_id !== 'undefined') {
+    workflow_id = decodeURIComponent(workflow_id);
+  }
+  if (run_id && run_id !== 'undefined') {
+    run_id = decodeURIComponent(run_id);
+  }
   
-  console.log('🔍 PARAMS DEBUG:', {
-    raw_workflow_id: params.workflow_id,
-    raw_run_id: params.run_id,
-    decoded_workflow_id: workflow_id,
-    decoded_run_id: run_id
+  console.log('🔍 FINAL PARAMS DEBUG:', {
+    useParams_workflow: params.workflow_id,
+    useParams_run: params.run_id,
+    final_workflow_id: workflow_id,
+    final_run_id: run_id,
+    window_path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
   });
 
   const [workflowData, setWorkflowData] = useState<WorkflowResult | null>(null)
@@ -846,10 +867,10 @@ export default function WorkflowDetailPage() {
       
       // Debug logging
       console.log('🔍 Debug - Fetching workflow:', {
-        raw_workflow_id: params.workflow_id,
-        decoded_workflow_id: workflow_id,
-        raw_run_id: params.run_id, 
-        decoded_run_id: run_id
+        useParams_workflow_id: params.workflow_id,
+        useParams_run_id: params.run_id,
+        final_workflow_id: workflow_id,
+        final_run_id: run_id
       })
       
       // URL encode the parameters for the API call
@@ -1166,9 +1187,11 @@ export default function WorkflowDetailPage() {
         <div className="mt-4 p-4 bg-gray-100 text-sm">
           <h3>🔍 DEBUG INFO:</h3>
           <p><strong>NEXT_PUBLIC_API_BASE_URL:</strong> {process.env.NEXT_PUBLIC_API_BASE_URL || 'UNDEFINED'}</p>
-          <p><strong>workflow_id:</strong> {workflow_id}</p>
-          <p><strong>run_id:</strong> {run_id}</p>
-          <p><strong>Params raw:</strong> {JSON.stringify(params)}</p>
+          <p><strong>useParams() workflow_id:</strong> {params.workflow_id as string || 'undefined'}</p>
+          <p><strong>useParams() run_id:</strong> {params.run_id as string || 'undefined'}</p>
+          <p><strong>Final workflow_id:</strong> {workflow_id}</p>
+          <p><strong>Final run_id:</strong> {run_id}</p>
+          <p><strong>Window path:</strong> {typeof window !== 'undefined' ? window.location.pathname : 'server-side'}</p>
         </div>
       </div>
     )
