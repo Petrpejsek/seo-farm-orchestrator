@@ -88,11 +88,25 @@ const parseImageOutput = (output: any): { images: any[], hasImages: boolean } =>
 const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) => {
   if (!isOpen) return null;
 
-  // Function to copy output to clipboard - NO FALLBACKS
+  // Function to copy output to clipboard with proper error handling
   const copyOutput = async () => {
+    try {
       const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-      await navigator.clipboard.writeText(textToCopy);
-    alert('✅ Výstup zkopírován do schránky!');
+      
+      // Check if clipboard API is available
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+        alert('✅ Výstup zkopírován do schránky!');
+      } else {
+        // Browser doesn't support clipboard API - show text for manual copy
+        prompt('📋 Zkopíruj tento text ručně (Ctrl+C):', textToCopy);
+      }
+    } catch (error) {
+      console.error('❌ Clipboard error:', error);
+      // If clipboard fails, show text for manual copy
+      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+      prompt('📋 Zkopíruj tento text ručně (Ctrl+C):', textToCopy);
+    }
   };
 
   // Function to render image previews
