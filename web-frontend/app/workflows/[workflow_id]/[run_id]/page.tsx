@@ -823,10 +823,8 @@ export default function WorkflowDetailPage() {
       const encodedWorkflowId = encodeURIComponent(workflow_id)
       const encodedRunId = encodeURIComponent(run_id)
       
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-      if (!apiBaseUrl) {
-        throw new Error('API_BASE_URL není nastaveno - musí být nastavena NEXT_PUBLIC_API_BASE_URL environment variable');
-      }
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      console.log('🔍 DEBUG: apiBaseUrl =', apiBaseUrl);
       const apiUrl = `${apiBaseUrl}/api/workflow-result/${encodedWorkflowId}/${encodedRunId}`
       console.log('🌐 API URL:', apiUrl)
       
