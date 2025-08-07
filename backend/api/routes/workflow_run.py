@@ -173,7 +173,7 @@ async def get_workflow_runs(
             where=where_conditions,
             include={"project": True},
             take=limit,
-            order={"startedAt": "desc"}
+            order_by={"startedAt": "desc"}
         )
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs z databáze")
@@ -359,7 +359,7 @@ async def get_project_workflow_runs(project_id: str, limit: int = 50):
             where={"projectId": project_id},
             include={"project": True},
             take=limit,
-            order={"startedAt": "desc"}
+            order_by={"startedAt": "desc"}
         )
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs pro projekt {project.name}")
