@@ -13,7 +13,7 @@ class TemporalConfig:
     host: str = "localhost:7233"
     namespace: str = "default"
     task_queue: str = "default"
-    max_workers: int = 3
+    max_workers: int = 12  # ⚡ BATCH PROCESSING: Zvýšeno pro paralelní zpracování stovek témat
     graceful_shutdown_timeout: int = 30
 
 @dataclass

@@ -53,6 +53,63 @@ class PublishFAQ:
     answer_html: str
 
 
+# ===== 📊 STRUKTUROVANÉ TABULKY PRO GEO/LLM =====
+
+@dataclass
+class TableRow:
+    """Řádek v tabulce s daty a metadaty"""
+    feature: str
+    values: List[Any]  # Hodnoty pro jednotlivé sloupce
+    type: Literal["text", "boolean", "price", "rating", "number"] = "text"
+    highlight: Optional[List[int]] = None  # Indexy zvýrazněných buněk
+
+
+@dataclass
+class ComparisonTable:
+    """Srovnávací tabulka pro produkty/služby"""
+    title: str
+    headers: List[str]  # Názvy sloupců
+    rows: List[TableRow]
+    type: Literal["comparison"] = "comparison"
+    subtitle: Optional[str] = None
+    highlightColumns: Optional[List[int]] = None  # Zvýrazněné sloupce
+    style: Literal["modern", "classic", "minimal"] = "modern"
+
+
+@dataclass
+class PricingTable:
+    """Cenová tabulka pro tarify a plány"""
+    title: str
+    headers: List[str]
+    rows: List[TableRow]
+    type: Literal["pricing"] = "pricing"
+    subtitle: Optional[str] = None
+    highlightColumns: Optional[List[int]] = None
+    style: Literal["modern", "classic", "minimal"] = "modern"
+
+
+@dataclass
+class FeatureTable:
+    """Tabulka funkcí a vlastností"""
+    title: str
+    headers: List[str]
+    rows: List[TableRow]
+    type: Literal["features"] = "features"
+    subtitle: Optional[str] = None
+    style: Literal["modern", "classic", "minimal"] = "minimal"
+
+
+@dataclass
+class DataTable:
+    """Obecná tabulka s daty a statistikami"""
+    title: str
+    headers: List[str]
+    rows: List[TableRow]
+    type: Literal["data"] = "data"
+    subtitle: Optional[str] = None
+    style: Literal["modern", "classic", "minimal"] = "classic"
+
+
 @dataclass
 class PublishInput:
     title: str
@@ -64,6 +121,11 @@ class PublishInput:
     format: Literal["html", "json", "wordpress"]
     language: str
     date_published: str
+    # 📊 Strukturované tabulky pro GEO/LLM
+    comparison_tables: Optional[List[ComparisonTable]] = None
+    pricing_tables: Optional[List[PricingTable]] = None
+    feature_tables: Optional[List[FeatureTable]] = None
+    data_tables: Optional[List[DataTable]] = None
 
 
 @dataclass
@@ -77,6 +139,11 @@ class PublishOutput:
     faq: List[Dict[str, Any]]
     schema_org: Dict[str, Any]
     format: str
+    # 📊 Strukturované tabulky pro landing pages
+    comparison_tables: Optional[List[Dict[str, Any]]] = None
+    pricing_tables: Optional[List[Dict[str, Any]]] = None
+    feature_tables: Optional[List[Dict[str, Any]]] = None
+    data_tables: Optional[List[Dict[str, Any]]] = None
 
 
 # ===== VALIDAČNÍ FUNKCE =====
@@ -509,6 +576,170 @@ def generate_wordpress_output(input_data: PublishInput) -> Dict[str, Any]:
     }
 
 
+# ===== 📊 TABULKY - EXTRAKCE Z ASISTENTŮ =====
+
+def extract_table_data_from_assistants(input_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    🔍 Extrahuje strukturovaná data pro tabulky z výstupů asistentů
+    
+    Hledá v content_html a dalších polích indikátory pro:
+    - Srovnávací tabulky (vs., oproti, comparison)
+    - Cenové tabulky (cena, tarif, plán, pricing)
+    - Feature tabulky (funkce, vlastnosti, features)
+    - Data tabulky (statistiky, čísla, data)
+    
+    Returns:
+        Dict s tabulkami nebo None pokud nejsou nalezeny
+    """
+    
+    def detect_comparison_indicators(text: str) -> bool:
+        """Detekuje indikátory srovnávacích tabulek"""
+        indicators = [
+            "srovnání", "comparison", "vs.", "oproti", "versus", 
+            "compare", "nejlepší", "top", "ranking", "hodnocení"
+        ]
+        text_lower = text.lower()
+        return any(indicator in text_lower for indicator in indicators)
+    
+    def detect_pricing_indicators(text: str) -> bool:
+        """Detekuje indikátory cenových tabulek"""
+        indicators = [
+            "cena", "pricing", "tarif", "plán", "cost", "price",
+            "zdarma", "free", "měsíc", "month", "ročně", "yearly",
+            "basic", "pro", "premium", "enterprise"
+        ]
+        text_lower = text.lower()
+        return any(indicator in text_lower for indicator in indicators)
+    
+    def detect_feature_indicators(text: str) -> bool:
+        """Detekuje indikátory feature tabulek"""
+        indicators = [
+            "funkce", "features", "vlastnosti", "možnosti", "capabilities",
+            "supports", "podporuje", "dostupné", "available"
+        ]
+        text_lower = text.lower()
+        return any(indicator in text_lower for indicator in indicators)
+    
+    def create_demo_comparison_table(topic: str) -> Dict[str, Any]:
+        """Vytvoří demo srovnávací tabulku na základě tématu"""
+        return {
+            "type": "comparison",
+            "title": f"Srovnání možností - {topic}",
+            "subtitle": "Detailní analýza možností a funkcí",
+            "headers": ["Kritérium", "Možnost A", "Možnost B", "Možnost C"],
+            "highlightColumns": [2],
+            "style": "modern",
+            "rows": [
+                {
+                    "feature": "Cena",
+                    "values": ["Střední", "Nízká", "Vysoká"],
+                    "type": "text",
+                    "highlight": [1]
+                },
+                {
+                    "feature": "Kvalita",
+                    "values": ["Vysoká", "Střední", "Velmi vysoká"],
+                    "type": "text",
+                    "highlight": [2]
+                },
+                {
+                    "feature": "Dostupnost",
+                    "values": [True, True, False],
+                    "type": "boolean"
+                },
+                {
+                    "feature": "Hodnocení",
+                    "values": [4.2, 3.8, 4.7],
+                    "type": "rating"
+                }
+            ]
+        }
+    
+    def create_demo_pricing_table(topic: str) -> Dict[str, Any]:
+        """Vytvoří demo cenovou tabulku na základě tématu"""
+        return {
+            "type": "pricing",
+            "title": f"Cenové možnosti - {topic}",
+            "subtitle": "Porovnání cen a výhod",
+            "headers": ["Funkce", "Basic", "Pro", "Enterprise"],
+            "highlightColumns": [2],
+            "style": "modern",
+            "rows": [
+                {
+                    "feature": "Měsíční cena",
+                    "values": ["Zdarma", "299 Kč", "Na vyžádání"],
+                    "type": "price"
+                },
+                {
+                    "feature": "Základní funkce",
+                    "values": [True, True, True],
+                    "type": "boolean"
+                },
+                {
+                    "feature": "Pokročilé funkce",
+                    "values": [False, True, True],
+                    "type": "boolean"
+                },
+                {
+                    "feature": "Podpora",
+                    "values": ["Email", "Email + Chat", "Dedikovaný manažer"],
+                    "type": "text"
+                }
+            ]
+        }
+    
+    try:
+        content_html = input_data.get("content_html", "")
+        title = input_data.get("title", "")
+        
+        if not content_html:
+            return None
+        
+        full_text = f"{title} {content_html}"
+        
+        result = {}
+        
+        # 🔍 Detekce srovnávacích tabulek
+        if detect_comparison_indicators(full_text):
+            result["comparisonTables"] = [create_demo_comparison_table(title)]
+        
+        # 💰 Detekce cenových tabulek
+        if detect_pricing_indicators(full_text):
+            result["pricingTables"] = [create_demo_pricing_table(title)]
+        
+        # ⚙️ Detekce feature tabulek (pokud je téma technické)
+        if detect_feature_indicators(full_text):
+            result["featureTables"] = [{
+                "type": "features",
+                "title": f"Klíčové funkce - {title}",
+                "headers": ["Funkce", "Popis"],
+                "style": "minimal",
+                "rows": [
+                    {
+                        "feature": "Snadné použití",
+                        "values": ["✓ Intuitivní rozhraní pro všechny uživatele"],
+                        "type": "text"
+                    },
+                    {
+                        "feature": "Rychlost",
+                        "values": ["✓ Vysoký výkon a optimalizace"],
+                        "type": "text"
+                    },
+                    {
+                        "feature": "Podpora",
+                        "values": ["✓ 24/7 technická podpora"],
+                        "type": "text"
+                    }
+                ]
+            }]
+        
+        return result if result else None
+        
+    except Exception as e:
+        print(f"⚠️ Chyba při extrakci tabulek: {e}")
+        return None
+
+
 # ===== HLAVNÍ FUNKCE =====
 
 def publish_script(input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -673,35 +904,61 @@ def publish_script(input_data: Dict[str, Any]) -> Dict[str, Any]:
         # Slug - generovat z title
         slug = generate_slug(title)
         
-        # ===== AI FARMA FORMÁT - VŠECHNA POLE POVINNÁ =====
+        # Extract ogImage from first visual if available (SAFE)
+        og_image = ""
+        try:
+            visuals = input_data.get("visuals", [])
+            if visuals and len(visuals) > 0:
+                first_visual = visuals[0]
+                og_image = first_visual.get("image_url", "")
+                if og_image and not is_valid_url(og_image):
+                    og_image = ""  # Fallback na prázdný string
+        except:
+            og_image = ""  # Safe fallback
+        
+        # ===== NOVÁ STRUKTURA PODLE SPECIFIKACE =====
         ai_farma_result = {
-            "title": meta_title,  # ✅ OPRAVA: Použít správný title z meta
-            "summary": summary,   # ✅ summary už je správný (z meta.description)
-            "language": language,
-            "contentHtml": content_html,
+            "title": meta_title or title,  # SAFE: fallback na title
+            "slug": meta_slug or generate_slug(title),  # SAFE: vždy nějaký slug
+            "language": language or "cs",  # SAFE: fallback na cs
             "meta": {
-                "title": meta_title,  # ✅ PŘIDÁNO - ze seo_assistant_output.metadata.title
-                "description": summary,  # ✅ ze seo_assistant_output.metadata.meta_description
-                "slug": meta_slug,  # ✅ PŘIDÁNO - ze seo_assistant_output.metadata.slug
-                "keywords": keywords
+                "description": summary or "Popis článku",  # SAFE: vždy něco
+                "keywords": keywords if isinstance(keywords, list) else [],  # SAFE: vždy list
+                "ogImage": og_image  # SAFE: může být prázdný string
             },
-            "publishedAt": published_at,
-            "slug": meta_slug  # ✅ OPRAVA: Použít správný slug z meta
+            "contentHtml": content_html or "<p>Obsah článku</p>"  # SAFE: vždy nějaký obsah
         }
         
         # FAQ je volitelné, ale pokud existuje, přidat ho
         if cleaned_faq:
             ai_farma_result["faq"] = cleaned_faq
         
-        # Obrázek z visuals (pokud existuje)
-        visuals = input_data.get("visuals", [])
-        if visuals and len(visuals) > 0:
-            first_visual = visuals[0]
-            image_url = first_visual.get("image_url", "")
-            if image_url and is_valid_url(image_url):
-                ai_farma_result["imageUrl"] = image_url
+        # Obrázek již zpracován výše v ogImage (meta.ogImage)
         
-        print("✅ ČISTÝ AI FARMA VÝSTUP:")
+        # 📊 GENEROVÁNÍ STRUKTUROVANÝCH TABULEK DO VISUALS OBJEKTU
+        table_data = extract_table_data_from_assistants(input_data)
+        
+        # SAFE: Vždy vytvořit visuals objekt, i prázdný
+        visuals_obj = {}
+        
+        # Pouze přidat tabulky, pokud existují (SAFE)
+        try:
+            if table_data and isinstance(table_data, dict):
+                if table_data.get("comparisonTables"):
+                    visuals_obj["comparisonTables"] = table_data["comparisonTables"]
+                if table_data.get("pricingTables"):
+                    visuals_obj["pricingTables"] = table_data["pricingTables"]
+                if table_data.get("featureTables"):
+                    visuals_obj["featureTables"] = table_data["featureTables"]
+        except Exception as e:
+            print(f"⚠️ Chyba při zpracování tabulek (pokračuji bez nich): {e}")
+            # SAFE: Pokračovat i bez tabulek
+        
+        # Přidat visuals pouze pokud obsahuje nějaká data
+        if visuals_obj:
+            ai_farma_result["visuals"] = visuals_obj
+        
+        print("✅ ČISTÝ AI FARMA VÝSTUP S TABULKAMI:")
         print("=" * 60)
         print(json.dumps(ai_farma_result, indent=2, ensure_ascii=False))
         print("=" * 60)

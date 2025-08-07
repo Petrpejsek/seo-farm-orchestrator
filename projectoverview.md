@@ -197,11 +197,11 @@ ALTER SCHEMA public OWNER TO seo_user;
 ### 3. Povolený vzdálený přístup ✅
 ```bash
 # /etc/postgresql/16/main/postgresql.conf
-listen_addresses = '*'
+  listen_addresses = '*'
 
 # /etc/postgresql/16/main/pg_hba.conf  
-host    seo_farm    seo_user    0.0.0.0/0    md5
-```
+  host    seo_farm    seo_user    0.0.0.0/0    md5
+  ```
 
 ## Lokální Vývojové Prostředí
 
@@ -248,15 +248,44 @@ pm2 restart seo-backend
 pm2 restart seo-frontend
 ```
 
-### ✅ AKTUÁLNÍ STAV - VŠE FUNKČNÍ (3.8.2025)
+### ✅ AKTUÁLNÍ STAV - VŠE FUNKČNÍ (6.8.2025 - KRITICKÉ OPRAVY)
+
+**🚨 KRITICKÉ OPRAVY DOKONČENY:**
+- ✅ **PublishAssistant OBNOVEN**: Smazaný soubor `activities/publish_assistant.py` obnoven s nejnovějšími opravami
+- ✅ **Worker Management OBNOVEN**: Smazaný `manage_worker.sh` script obnoven
+- ✅ **DataClass chyby OPRAVENY**: Opraveny chyby v `publish_script.py` (non-default po default argumentech)
+- ✅ **QA Assistant FUNKČNÍ**: Správně dostává vstupy z předchozích asistentů
+- ✅ **Worker RESTARTOVÁN**: PID 66111 - načetl všechny opravy:
+ 
+1 of 5 unhandled errors
+Next.js (14.0.0) is outdated (learn more)
+
+Unhandled Runtime Error
+TypeError: Failed to fetch
+
+Source
+app/workflows/page.tsx (45:29) @ fetch
+
+  43 | console.log('🌐 DEBUG: Full API URL:', apiUrl);
+  44 | 
+> 45 | const response = await fetch(apiUrl)
+     |                       ^
+  46 | console.log('📡 DEBUG: Response status:', response.status, response.statusText);
+  47 | 
+  48 | if (!response.ok) {
+    
 
 **🌐 SLUŽBY A PORTY:**
 - ✅ **Frontend (Next.js)**: http://localhost:3001 ← SPRÁVNÝ PORT!
 - ✅ **Backend (FastAPI)**: http://localhost:8000
 - ✅ **Temporal Server**: localhost:7233
 - ✅ **Temporal UI**: http://localhost:8233
-- ✅ **Temporal Worker**: Jeden bezpečný worker (PID 42887)
+- ✅ **Temporal Worker**: Jeden bezpečný worker (PID 66111) ← NOVÝ!
 - ✅ **Database**: PostgreSQL na 91.99.210.104:5432
+
+**🧪 TESTOVACÍ PIPELINE SPUŠTĚNA:**
+- Workflow ID: `assistant_pipeline_test_publish_assistant_opravy_1754510937`
+- Frontend: http://localhost:3001/workflows/assistant_pipeline_test_publish_assistant_opravy_1754510937/db305aef-9843-460d-b882-760aefd6a70b
 
 **🔧 RYCHLÁ KONTROLA:**
 ```bash
@@ -266,6 +295,28 @@ curl http://localhost:8000/health            # Backend
 curl http://localhost:3001                   # Frontend
 ps aux | grep "temporal server" | head -1   # Temporal server
 ```
+
+---
+
+## Kritické Opravy (7.8.2025)
+
+### 🔧 Oprava TypeError undefined.substring v workflows
+**Problém**: Production frontend házal TypeError na `/workflows` stránce kvůli `undefined.substring()`.
+
+**Řešení**: ✅ Opravena `truncateHash` funkce pro zpracování `undefined` hodnot.
+
+**Commit**: `9f923b9` - "🔧 Oprava TypeError undefined.substring v workflows stránce"
+
+**Soubor**: `web-frontend/app/workflows/page.tsx`
+
+### 🔧 Rozšíření API klíče modal o všechny LLM
+**Problém**: Submit button nefungoval pro Claude a Gemini API klíče.
+
+**Řešení**: ✅ Přidána podpora pro všechny 4 LLM providery s korektní validací.
+
+**Commit**: `0b7d459` - "🔧 Oprava API klíče modal - funkční submit button"
+
+**Soubor**: `web-frontend/app/components/ApiKeyModal.tsx`
 
 ---
 

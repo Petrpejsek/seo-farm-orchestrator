@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,11 +44,8 @@ app = FastAPI(
 # CORS middleware - povolení přístupu z frontendu
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3001",  # Frontend development server (primary port)
-        "http://127.0.0.1:3001",  # Alternative localhost format
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Povolí všechny domény pro debugging
+    allow_credentials=False,  # Musí být False když origins=["*"]
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -86,10 +83,211 @@ async def root():
     """Health check endpoint pro ověření stavu API"""
     return {"message": "SEO Farm Orchestrator Backend API", "status": "running"}
 
+class BatchPipelineRequest(BaseModel):
+    """Batch request pro spuštění více workflow z CSV."""
+    project_id: str = Field(..., description="ID projektu pro propojení workflow")
+    csv: CSVData = Field(..., description="CSV soubor s tématy")
+    batch_name: Optional[str] = Field(None, description="Název batch jobu")
+
+class BatchPipelineResponse(BaseModel):
+    """Response pro batch spuštění."""
+    status: str = Field(..., description="Status spuštění batch workflow")
+    batch_id: str = Field(..., description="ID batch jobu")
+    total_workflows: int = Field(..., description="Celkový počet spuštěných workflow")
+    workflow_ids: list[str] = Field(..., description="Seznam workflow ID")
+
+
+# ===== 📊 LANDING PAGES S TABULKAMI =====
+
+class TableRowModel(BaseModel):
+    """Model pro řádek v tabulce"""
+    feature: str
+    values: list  # Různé typy hodnot
+    type: str = "text"  # text, boolean, price, rating, number
+    highlight: Optional[list[int]] = None
+
+
+class ComparisonTableModel(BaseModel):
+    """Model pro srovnávací tabulku"""
+    type: str = "comparison"
+    title: str
+    subtitle: Optional[str] = None
+    headers: list[str]
+    rows: list[TableRowModel]
+    highlightColumns: Optional[list[int]] = None
+    style: str = "modern"
+
+
+class PricingTableModel(BaseModel):
+    """Model pro cenovou tabulku"""
+    type: str = "pricing"
+    title: str
+    subtitle: Optional[str] = None
+    headers: list[str]
+    rows: list[TableRowModel]
+    highlightColumns: Optional[list[int]] = None
+    style: str = "modern"
+
+
+class FeatureTableModel(BaseModel):
+    """Model pro feature tabulku"""
+    type: str = "features"
+    title: str
+    subtitle: Optional[str] = None
+    headers: list[str]
+    rows: list[TableRowModel]
+    style: str = "minimal"
+
+
+# ===== NOVÉ MODELY PODLE SPECIFIKACE =====
+
+class MetaModel(BaseModel):
+    """Meta informace pro SEO"""
+    description: str = Field(..., description="SEO popis 150-160 znaků")
+    keywords: list[str] = Field(default=[], description="SEO klíčová slova")
+    ogImage: str = Field(default="", description="URL k hlavnímu obrázku")
+
+
+class VisualsModel(BaseModel):
+    """Strukturované vizuální prvky"""
+    comparisonTables: Optional[list[ComparisonTableModel]] = None
+    pricingTables: Optional[list[PricingTableModel]] = None
+    featureTables: Optional[list[FeatureTableModel]] = None
+
+
+class LandingPageRequest(BaseModel):
+    """Request pro vytvoření landing page podle nové specifikace"""
+    title: str = Field(..., description="Přesný titulek článku")
+    slug: str = Field(..., description="URL-friendly slug bez diakritiky")
+    language: str = Field(default="cs", description="Jazyk obsahu")
+    meta: MetaModel = Field(..., description="Meta informace pro SEO")
+    contentHtml: str = Field(..., description="HTML obsah článku")
+    visuals: Optional[VisualsModel] = Field(None, description="Strukturované vizuální prvky")
+
+
+class LandingPageResponse(BaseModel):
+    """Response pro landing page podle nové specifikace"""
+    id: str = Field(..., description="ID landing page")
+    title: str
+    slug: str
+    language: str
+    meta: dict  # Flexibilní meta objekt
+    contentHtml: str
+    visuals: Optional[dict] = None  # Flexibilní visuals objekt
+    createdAt: str
+    updatedAt: str
+
+@app.post("/api/batch-pipeline", response_model=BatchPipelineResponse)
+async def batch_pipeline_run(request: BatchPipelineRequest):
+    """
+    🚀 BATCH PROCESSING: Spustí SEO pipeline pro všechna témata z CSV současně.
+    
+    Args:
+        request: Batch request s project_id a CSV souborem
+        
+    Returns:
+        Response s batch ID a seznamem spuštěných workflow
+    """
+    import base64
+    import csv
+    import io
+    from datetime import datetime
+    
+    try:
+        logger.info(f"🚀 BATCH PROCESSING STARTED:")
+        logger.info(f"   🏗️ Project ID: {request.project_id}")
+        logger.info(f"   📄 Batch: {request.batch_name or 'Bez názvu'}")
+        
+        # Ověření existence projektu
+        prisma = await get_prisma_client()
+        project = await prisma.project.find_unique(where={"id": request.project_id})
+        if not project:
+            logger.error(f"❌ Projekt s ID {request.project_id} nenalezen")
+            raise HTTPException(status_code=400, detail=f"Projekt s ID {request.project_id} neexistuje")
+        
+        # Dekódování a parsování CSV
+        try:
+            csv_content = base64.b64decode(request.csv.content).decode('utf-8')
+            csv_reader = csv.reader(io.StringIO(csv_content))
+            
+            topics = []
+            for row_idx, row in enumerate(csv_reader):
+                if row_idx == 0:  # Skip header
+                    continue
+                if row and row[0].strip():  # Non-empty topic
+                    topics.append(row[0].strip())
+            
+            logger.info(f"📋 Parsováno {len(topics)} témat z CSV")
+            
+        except Exception as e:
+            logger.error(f"❌ Chyba při parsování CSV: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Neplatný CSV formát: {str(e)}")
+        
+        if not topics:
+            raise HTTPException(status_code=400, detail="CSV neobsahuje žádná témata")
+        
+        # Batch ID pro tracking
+        batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(topics)}"
+        logger.info(f"🆔 Batch ID: {batch_id}")
+        
+        # Spuštění workflow pro každé téma
+        workflow_ids = []
+        failed_topics = []
+        
+        for i, topic in enumerate(topics):
+            try:
+                logger.info(f"🚀 Spouštím workflow {i+1}/{len(topics)}: '{topic}'")
+                
+                workflow_id, run_id = await start_seo_pipeline(
+                    topic=topic,
+                    project_id=request.project_id,
+                    csv_base64=None  # Individual workflow, no CSV needed
+                )
+                
+                workflow_ids.append(workflow_id)
+                
+                # Vytvoření databázového záznamu
+                from api.routes.workflow_run import WorkflowRunCreate, create_workflow_run
+                
+                workflow_run_data = WorkflowRunCreate(
+                    projectId=request.project_id,
+                    topic=f"[BATCH:{batch_id}] {topic}",
+                    runId=run_id,
+                    workflowId=workflow_id
+                )
+                
+                await create_workflow_run(workflow_run_data)
+                logger.info(f"✅ Workflow {i+1} spuštěn: {workflow_id}")
+                
+            except Exception as e:
+                logger.error(f"❌ Chyba při spouštění workflow pro '{topic}': {str(e)}")
+                failed_topics.append(f"{topic}: {str(e)}")
+        
+        success_count = len(workflow_ids)
+        logger.info(f"🎉 BATCH COMPLETED:")
+        logger.info(f"   ✅ Úspěšně: {success_count}/{len(topics)}")
+        logger.info(f"   ❌ Chyby: {len(failed_topics)}")
+        
+        if failed_topics:
+            logger.warning(f"❌ Neúspěšná témata: {failed_topics}")
+        
+        return BatchPipelineResponse(
+            status=f"Batch spuštěn: {success_count}/{len(topics)} workflow",
+            batch_id=batch_id,
+            total_workflows=success_count,
+            workflow_ids=workflow_ids
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ BATCH PROCESSING FAILED: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chyba při batch processing: {str(e)}")
+
 @app.post("/api/pipeline-run", response_model=PipelineResponse)
 async def pipeline_run(request: PipelineRequest):
     """
-    Spustí SEO pipeline workflow přes Temporal a vytvoří záznam v databázi.
+    Spustí SINGLE SEO pipeline workflow přes Temporal a vytvoří záznam v databázi.
     
     Args:
         request: Pipeline request s tématem, project_id a volitelným CSV
@@ -829,6 +1027,147 @@ async def retry_publish_script(request: dict):
     except Exception as e:
         logger.error(f"❌ Chyba v retry_publish_script: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Neočekávaná chyba: {str(e)}")
+
+# ===== 📊 LANDING PAGES API ENDPOINT =====
+
+@app.post("/api/landing-pages", response_model=LandingPageResponse)
+async def create_landing_page(request: LandingPageRequest):
+    """
+    📊 VYTVOŘENÍ LANDING PAGE S STRUKTUROVANÝMI TABULKAMI
+    
+    Endpoint pro ukládání landing pages s comparison/pricing/feature tabulkami
+    optimalizovanými pro GEO/LLM modely a SEO.
+    
+    Args:
+        request: Landing page data s tabulkami
+        
+    Returns:
+        Vytvořená landing page s ID a timestamps
+    """
+    from datetime import datetime
+    import uuid
+    import json
+    
+    try:
+        logger.info(f"📊 VYTVÁŘENÍ LANDING PAGE (NOVÁ STRUKTURA):")
+        logger.info(f"   📋 Title: {request.title}")
+        logger.info(f"   🔗 Slug: {request.slug}")
+        logger.info(f"   🌍 Language: {request.language}")
+        logger.info(f"   📄 Meta description: {request.meta.description[:50] if request.meta else 'N/A'}...")
+        
+        # SAFE logging pro visuals
+        if request.visuals:
+            logger.info(f"   📊 Comparison tables: {len(request.visuals.comparisonTables or [])}")
+            logger.info(f"   💰 Pricing tables: {len(request.visuals.pricingTables or [])}")
+            logger.info(f"   ⚙️ Feature tables: {len(request.visuals.featureTables or [])}")
+        else:
+            logger.info(f"   📊 Žádné tabulky v request")
+        
+        # Generování ID a timestamp
+        landing_page_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        # SAFE: Převod struktur na JSON s fallbacky
+        meta_dict = {}
+        visuals_dict = {}
+        
+        try:
+            # Meta informace (vždy vytvořit, i prázdné)
+            meta_dict = {
+                "description": request.meta.description if request.meta else "Popis článku",
+                "keywords": request.meta.keywords if request.meta else [],
+                "ogImage": request.meta.ogImage if request.meta else ""
+            }
+            
+            # Visuals (pouze pokud existují)
+            if request.visuals:
+                if request.visuals.comparisonTables:
+                    visuals_dict["comparisonTables"] = [table.dict() for table in request.visuals.comparisonTables]
+                if request.visuals.pricingTables:
+                    visuals_dict["pricingTables"] = [table.dict() for table in request.visuals.pricingTables]
+                if request.visuals.featureTables:
+                    visuals_dict["featureTables"] = [table.dict() for table in request.visuals.featureTables]
+                    
+        except Exception as e:
+            logger.warning(f"⚠️ Chyba při zpracování meta/visuals (používám fallbacky): {e}")
+            # SAFE fallbacks
+            meta_dict = {"description": "Popis článku", "keywords": [], "ogImage": ""}
+            visuals_dict = {}
+        
+        # Vytvoření response (SAFE)
+        response = LandingPageResponse(
+            id=landing_page_id,
+            title=request.title or "Článek",
+            slug=request.slug or "clanek",
+            language=request.language or "cs",
+            meta=meta_dict,
+            contentHtml=request.contentHtml or "<p>Obsah článku</p>",
+            visuals=visuals_dict if visuals_dict else None,
+            createdAt=now,
+            updatedAt=now
+        )
+        
+        # Log pro debugging
+        logger.info(f"✅ Landing page vytvořena:")
+        logger.info(f"   🆔 ID: {landing_page_id}")
+        logger.info(f"   📊 Visuals obsahují: {len(visuals_dict)} typů tabulek")
+        
+        # DEBUG: Výpis první comparison table pokud existuje
+        if visuals_dict.get("comparisonTables"):
+            first_table = visuals_dict["comparisonTables"][0]
+            logger.info(f"   🔍 První comparison table: {first_table['title']}")
+            logger.info(f"   📋 Headers: {first_table['headers']}")
+            logger.info(f"   📊 Rows: {len(first_table['rows'])}")
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"❌ Chyba při vytváření landing page: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chyba při vytváření landing page: {str(e)}")
+
+
+@app.get("/api/landing-pages/{page_id}", response_model=LandingPageResponse)
+async def get_landing_page(page_id: str):
+    """
+    📖 NAČTENÍ LANDING PAGE
+    
+    Args:
+        page_id: ID landing page
+        
+    Returns:
+        Landing page s tabulkami
+    """
+    try:
+        logger.info(f"📖 Načítám landing page: {page_id}")
+        
+        # TODO: Implementovat skutečné načtení z databáze
+        # Pro teď vrátíme demo data
+        
+        from datetime import datetime
+        
+        demo_response = LandingPageResponse(
+            id=page_id,
+            title="Demo Landing Page",
+            slug="demo-landing-page", 
+            language="cs",
+            meta={
+                "description": "Demo landing page pro testování API",
+                "keywords": ["demo", "landing", "page"],
+                "ogImage": ""
+            },
+            contentHtml="<h1>Demo obsah</h1><p>Toto je demo landing page.</p>",
+            visuals=None,  # Žádné demo tabulky
+            createdAt=datetime.now().isoformat(),
+            updatedAt=datetime.now().isoformat()
+        )
+        
+        logger.info(f"✅ Landing page načtena: {page_id}")
+        return demo_response
+        
+    except Exception as e:
+        logger.error(f"❌ Chyba při načítání landing page: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Landing page nenalezena: {page_id}")
+
 
 @app.get("/health")
 async def health_check():

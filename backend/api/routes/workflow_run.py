@@ -146,6 +146,27 @@ async def create_workflow_run(workflow_run: WorkflowRunCreate):
         logger.error(f"❌ Chyba při vytváření workflow run v databázi: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Chyba při vytváření workflow run: {str(e)}")
 
+@router.get("/workflow-runs-test")
+async def get_workflow_runs_test():
+    """TEST ENDPOINT - ověření že změny kódu se načetly"""
+    from prisma import Prisma
+    import os
+    
+    logger.info("🔥 TEST ENDPOINT: FRESH CODE LOADED!")
+    prisma = Prisma()
+    await prisma.connect()
+    
+    result = await prisma.workflowrun.find_many(take=1, order={"startedAt": "desc"})
+    await prisma.disconnect()
+    
+    if result:
+        return {
+            "message": "🔥 FRESH CODE WORKING!", 
+            "latest_date": result[0].startedAt.strftime("%Y-%m-%d"),
+            "topic": result[0].topic[:50]
+        }
+    return {"message": "No data"}
+
 @router.get("/workflow-runs", response_model=List[WorkflowRunListResponse])
 async def get_workflow_runs(
     project_id: Optional[str] = None,
@@ -159,7 +180,16 @@ async def get_workflow_runs(
         logger.info(f"   📊 Status filter: {status}")
         logger.info(f"   📏 Limit: {limit}")
         
-        prisma = await get_prisma_client()
+        # AGGRESSIVE FIX: Force fresh Prisma client with explicit disconnect/reconnect
+        from prisma import Prisma
+        import os
+        logger.info("🔥 CREATING COMPLETELY FRESH PRISMA CLIENT")
+        prisma = Prisma()
+        # Force fresh connection with explicit DATABASE_URL
+        db_url = os.getenv("DATABASE_URL", "postgresql://seo_user:silne-heslo@127.0.0.1:5432/seo_farm")
+        logger.info(f"🔥 Using DB URL: {db_url[:50]}...")
+        await prisma.connect()
+        logger.info("🔥 Fresh Prisma connected - testing query...")
         
         # Sestavení WHERE podmínky pro filtrování
         where_conditions = {}
@@ -202,10 +232,18 @@ async def get_workflow_runs(
                 totalStages=run.totalStages
             ))
         
+        # Cleanup fresh Prisma client
+        await prisma.disconnect()
+        logger.info("🔥 Fresh Prisma client disconnected")
         return result
         
     except Exception as e:
         logger.error(f"❌ Chyba při načítání workflow runs z databáze: {str(e)}")
+        # Cleanup on error
+        try:
+            await prisma.disconnect()
+        except:
+            pass
         raise HTTPException(status_code=500, detail=f"Chyba při načítání workflow běhů: {str(e)}")
 
 @router.get("/workflow-run/{run_id}", response_model=WorkflowRunResponse)

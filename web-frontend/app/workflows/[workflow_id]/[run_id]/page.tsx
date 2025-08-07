@@ -90,8 +90,8 @@ const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) =
 
   // Function to copy output to clipboard - NO FALLBACKS
   const copyOutput = async () => {
-    const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-    await navigator.clipboard.writeText(textToCopy);
+      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+      await navigator.clipboard.writeText(textToCopy);
     alert('✅ Výstup zkopírován do schránky!');
   };
 
