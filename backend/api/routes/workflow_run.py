@@ -171,7 +171,7 @@ async def get_workflow_runs_test():
 async def get_workflow_runs(
     project_id: Optional[str] = None,
     status: Optional[str] = None,
-    limit: int = 50
+    limit: int = 500
 ):
     """Získání seznamu workflow běhů z databáze s možností filtrování"""
     try:
@@ -380,7 +380,7 @@ async def delete_workflow_run(run_id: str):
         raise HTTPException(status_code=500, detail=f"Chyba při mazání workflow běhu: {str(e)}")
 
 @router.get("/projects/{project_id}/workflow-runs", response_model=List[WorkflowRunListResponse])
-async def get_project_workflow_runs(project_id: str, limit: int = 50):
+async def get_project_workflow_runs(project_id: str, limit: int = 500):
     """Získání workflow běhů pro konkrétní projekt z databáze"""
     try:
         logger.info(f"📋 Načítám workflow runs pro projekt {project_id} z databáze")
