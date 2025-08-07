@@ -168,11 +168,12 @@ async def get_workflow_runs(
         if status:
             where_conditions["status"] = status
         
-        # Načtení workflow runs z databáze s projekty
+        # Načtení workflow runs z databáze s projekty - ORDER BY startedAt DESC
         workflow_runs = await prisma.workflowrun.find_many(
             where=where_conditions,
             include={"project": True},
-            take=limit
+            take=limit,
+            order={"startedAt": "desc"}
         )
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs z databáze")
@@ -353,11 +354,12 @@ async def get_project_workflow_runs(project_id: str, limit: int = 50):
             logger.warning(f"⚠️ Projekt {project_id} nenalezen")
             raise HTTPException(status_code=404, detail="Projekt nenalezen")
         
-        # Načtení workflow runs pro projekt
+        # Načtení workflow runs pro projekt - ORDER BY startedAt DESC
         workflow_runs = await prisma.workflowrun.find_many(
             where={"projectId": project_id},
             include={"project": True},
-            take=limit
+            take=limit,
+            order={"startedAt": "desc"}
         )
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs pro projekt {project.name}")
