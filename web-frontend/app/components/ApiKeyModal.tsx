@@ -81,38 +81,38 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
 
     // Validace podle provideru
     if (selectedProvider === 'openai') {
-      if (!openaiKey.startsWith('sk-')) {
+      if (!currentKey.startsWith('sk-')) {
         setError('OpenAI API klíč musí začínat "sk-"')
         return
       }
-      if (openaiKey.length < 20) {
+      if (currentKey.length < 20) {
         setError('OpenAI API klíč je příliš krátký (minimum 20 znaků)')
         return
       }
     } else if (selectedProvider === 'claude') {
-      if (!claudeKey.startsWith('sk-ant-')) {
+      if (!currentKey.startsWith('sk-ant-')) {
         setError('Anthropic Claude API klíč musí začínat "sk-ant-"')
         return
       }
-      if (claudeKey.length < 20) {
+      if (currentKey.length < 20) {
         setError('Claude API klíč je příliš krátký (minimum 20 znaků)')
         return
       }
     } else if (selectedProvider === 'gemini') {
-      if (geminiKey.length < 10) {
+      if (currentKey.length < 10) {
         setError('Google Gemini API klíč je příliš krátký (minimum 10 znaků)')
         return
       }
     } else if (selectedProvider === 'fal') {
       // FAL.AI má dva formáty: fal-xxx nebo uuid:hash
-      const isNewFormat = falKey.startsWith('fal-')
-      const isOldFormat = /^[a-f0-9-]{36}:[a-f0-9]{32}$/.test(falKey)
+      const isNewFormat = currentKey.startsWith('fal-')
+      const isOldFormat = /^[a-f0-9-]{36}:[a-f0-9]{32}$/.test(currentKey)
       
       if (!isNewFormat && !isOldFormat) {
         setError('FAL.AI API klíč musí být ve formátu "fal-xxx" nebo "uuid:hash"')
         return
       }
-      if (falKey.length < 10) {
+      if (currentKey.length < 10) {
         setError('FAL.AI API klíč je příliš krátký')
         return
       }
@@ -334,7 +334,12 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={loading || !((selectedProvider === 'openai' ? openaiKey : falKey).trim())}
+                disabled={loading || !(
+                  selectedProvider === 'openai' ? openaiKey.trim() :
+                  selectedProvider === 'claude' ? claudeKey.trim() :
+                  selectedProvider === 'gemini' ? geminiKey.trim() :
+                  falKey.trim()
+                )}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 {loading ? '⏳ Ukládám...' : '💾 Uložit'}
