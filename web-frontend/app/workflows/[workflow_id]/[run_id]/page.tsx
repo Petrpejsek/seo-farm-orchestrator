@@ -713,41 +713,59 @@ const PipelineProgress = ({ stages, assistantOrder, expandedAssistants, toggleAs
 export default function WorkflowDetailPage() {
   const params = useParams()
   
-  // FALLBACK: Extract parameters from window.location if useParams fails
-  const getUrlParams = () => {
+  // State for client-side URL params
+  const [clientUrlParams, setClientUrlParams] = useState<{workflow_id: string | null, run_id: string | null}>({
+    workflow_id: null,
+    run_id: null
+  });
+  const [isClient, setIsClient] = useState(false);
+  
+  // Extract parameters from window.location (client-side only)
+  useEffect(() => {
+    setIsClient(true);
+    
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
-      console.log('🔍 WINDOW PATH:', path);
+      console.log('🔍 CLIENT WINDOW PATH:', path);
       
       // Extract from path: /workflows/[workflow_id]/[run_id]
       const matches = path.match(/\/workflows\/([^\/]+)\/([^\/]+)/);
       if (matches) {
-        return {
+        const extracted = {
           workflow_id: decodeURIComponent(matches[1]),
           run_id: decodeURIComponent(matches[2])
         };
+        console.log('🔍 EXTRACTED FROM URL:', extracted);
+        setClientUrlParams(extracted);
       }
     }
-    return { workflow_id: null, run_id: null };
-  };
+  }, []);
   
-  // Try useParams first, fallback to window.location
+  // Determine final params: try useParams first, fallback to client URL extraction
   let workflow_id = params.workflow_id as string;
   let run_id = params.run_id as string;
   
-  if (!workflow_id || !run_id || workflow_id === 'undefined' || run_id === 'undefined') {
-    console.log('❌ useParams() failed, trying window.location fallback');
-    const urlParams = getUrlParams();
-    workflow_id = urlParams.workflow_id || 'undefined';
-    run_id = urlParams.run_id || 'undefined';
+  // If useParams failed and we have client-side extracted params, use those
+  if ((!workflow_id || !run_id || workflow_id === 'undefined' || run_id === 'undefined') && isClient) {
+    console.log('❌ useParams() failed, using client URL extraction');
+    workflow_id = clientUrlParams.workflow_id || 'undefined';
+    run_id = clientUrlParams.run_id || 'undefined';
   }
   
-  // Decode if not already decoded
+  // Additional decoding if needed
   if (workflow_id && workflow_id !== 'undefined') {
-    workflow_id = decodeURIComponent(workflow_id);
+    try {
+      workflow_id = decodeURIComponent(workflow_id);
+    } catch (e) {
+      console.warn('Failed to decode workflow_id:', workflow_id);
+    }
   }
   if (run_id && run_id !== 'undefined') {
-    run_id = decodeURIComponent(run_id);
+    try {
+      run_id = decodeURIComponent(run_id);
+    } catch (e) {
+      console.warn('Failed to decode run_id:', run_id);
+    }
   }
   
   console.log('🔍 FINAL PARAMS DEBUG:', {
@@ -755,7 +773,8 @@ export default function WorkflowDetailPage() {
     useParams_run: params.run_id,
     final_workflow_id: workflow_id,
     final_run_id: run_id,
-    window_path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+    isClient,
+    clientUrlParams
   });
 
   const [workflowData, setWorkflowData] = useState<WorkflowResult | null>(null)
@@ -1191,7 +1210,10 @@ export default function WorkflowDetailPage() {
           <p><strong>useParams() run_id:</strong> {params.run_id as string || 'undefined'}</p>
           <p><strong>Final workflow_id:</strong> {workflow_id}</p>
           <p><strong>Final run_id:</strong> {run_id}</p>
-          <p><strong>Window path:</strong> {typeof window !== 'undefined' ? window.location.pathname : 'server-side'}</p>
+          <p><strong>Is client:</strong> {isClient ? 'true' : 'false'}</p>
+          {isClient && (
+            <p><strong>Window path:</strong> {window.location.pathname}</p>
+          )}
         </div>
       </div>
     )
