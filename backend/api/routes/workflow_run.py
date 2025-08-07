@@ -168,46 +168,14 @@ async def get_workflow_runs(
         if status:
             where_conditions["status"] = status
         
-        # FALLBACK: RAW SQL pro správné ordering - Prisma nefunguje
-        if project_id and status:
-            sql_where = f'WHERE "projectId" = \'{project_id}\' AND status = \'{status}\''
-        elif project_id:
-            sql_where = f'WHERE "projectId" = \'{project_id}\''
-        elif status:
-            sql_where = f'WHERE status = \'{status}\''
-        else:
-            sql_where = ''
-            
-        workflow_runs_raw = await prisma.query_raw(
-            f'''
-            SELECT wr.*, p.name as project_name
-            FROM workflow_runs wr
-            LEFT JOIN projects p ON wr."projectId" = p.id
-            {sql_where}
-            ORDER BY wr."startedAt" DESC
-            LIMIT {limit}
-            '''
+        # FIX: Prisma find_many s correct ordering syntax
+        # Based on Prisma Python docs: order (not order_by) with {"field": "desc"}
+        workflow_runs = await prisma.workflowrun.find_many(
+            where=where_conditions,
+            include={"project": True},
+            take=limit,
+            order={"startedAt": "desc"}
         )
-        
-        # Konverze raw results na Prisma objekty
-        workflow_runs = []
-        for raw_run in workflow_runs_raw:
-            # Vytvoření mock Prisma objektu pro kompatibilitu
-            mock_run = type('MockRun', (), {
-                'id': raw_run['id'],
-                'projectId': raw_run['projectId'],
-                'runId': raw_run['runId'],
-                'workflowId': raw_run['workflowId'],
-                'topic': raw_run['topic'],
-                'status': raw_run['status'],
-                'startedAt': raw_run['startedAt'],
-                'finishedAt': raw_run['finishedAt'],
-                'elapsedSeconds': raw_run['elapsedSeconds'],
-                'stageCount': raw_run['stageCount'],
-                'totalStages': raw_run['totalStages'],
-                'project': type('MockProject', (), {'name': raw_run['project_name']})()
-            })()
-            workflow_runs.append(mock_run)
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs z databáze")
         
@@ -392,7 +360,7 @@ async def get_project_workflow_runs(project_id: str, limit: int = 50):
             where={"projectId": project_id},
             include={"project": True},
             take=limit,
-            order={"startedAt": "Desc"}
+            order={"startedAt": "desc"}
         )
         
         logger.info(f"✅ Načteno {len(workflow_runs)} workflow runs pro projekt {project.name}")
