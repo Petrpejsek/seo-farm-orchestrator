@@ -722,6 +722,7 @@ export default function WorkflowDetailPage() {
   
   // Extract parameters from window.location (client-side only)
   useEffect(() => {
+    console.log('🔍 CLIENT INITIALIZATION START');
     setIsClient(true);
     
     if (typeof window !== 'undefined') {
@@ -737,6 +738,9 @@ export default function WorkflowDetailPage() {
         };
         console.log('🔍 EXTRACTED FROM URL:', extracted);
         setClientUrlParams(extracted);
+        console.log('✅ CLIENT URL PARAMS SET');
+      } else {
+        console.log('❌ NO MATCH FOUND IN URL PATH');
       }
     }
   }, []);
@@ -944,12 +948,13 @@ export default function WorkflowDetailPage() {
     }
   }
 
-  // Setup polling
+  // Setup polling - wait for client-side initialization
   useEffect(() => {
-    if (workflow_id && run_id) {
+    if (isClient && workflow_id && run_id && workflow_id !== 'undefined' && run_id !== 'undefined') {
+      console.log('🚀 Client ready, starting data fetch with:', { workflow_id, run_id });
       fetchWorkflowResult()
     }
-  }, [workflow_id, run_id])
+  }, [workflow_id, run_id, isClient, clientUrlParams])
 
   useEffect(() => {
     if (isPolling && workflowData?.status === 'RUNNING') {
@@ -1208,6 +1213,8 @@ export default function WorkflowDetailPage() {
           <p><strong>NEXT_PUBLIC_API_BASE_URL:</strong> {process.env.NEXT_PUBLIC_API_BASE_URL || 'UNDEFINED'}</p>
           <p><strong>useParams() workflow_id:</strong> {params.workflow_id as string || 'undefined'}</p>
           <p><strong>useParams() run_id:</strong> {params.run_id as string || 'undefined'}</p>
+          <p><strong>Client URL workflow_id:</strong> {clientUrlParams.workflow_id || 'null'}</p>
+          <p><strong>Client URL run_id:</strong> {clientUrlParams.run_id || 'null'}</p>
           <p><strong>Final workflow_id:</strong> {workflow_id}</p>
           <p><strong>Final run_id:</strong> {run_id}</p>
           <p><strong>Is client:</strong> {isClient ? 'true' : 'false'}</p>
