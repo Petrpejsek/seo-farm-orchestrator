@@ -175,7 +175,7 @@ export default function WorkflowsPage() {
               </tr>
             ) : (
               workflows.map((workflow) => (
-                <tr key={`${workflow.workflow_id}-${workflow.run_id}`} className="hover:bg-gray-50">
+                <tr key={`${workflow.workflowId}-${workflow.runId}`} className="hover:bg-gray-50">
                   <td className="px-4 py-2 border-b">
                     <span title={getStatusText(workflow.status, workflow.startedAt || workflow.createdAt)}>
                       {getStatusIcon(workflow.status, workflow.startedAt || workflow.createdAt)}
@@ -196,13 +196,13 @@ export default function WorkflowsPage() {
                       {workflow.workflow_type?.replace('Workflow', '')}</span>
                   </td>
                   <td className="px-4 py-2 border-b">
-                    <span title={workflow.workflow_id}>
-                      {truncateHash(workflow.workflow_id)}
+                    <span title={workflow.workflowId}>
+                      {truncateHash(workflow.workflowId)}
                     </span>
                   </td>
                   <td className="px-4 py-2 border-b">
-                    <span title={workflow.run_id}>
-                      {truncateHash(workflow.run_id)}
+                    <span title={workflow.runId}>
+                      {truncateHash(workflow.runId)}
                     </span>
                   </td>
                   <td className="px-4 py-2 border-b">
@@ -213,7 +213,7 @@ export default function WorkflowsPage() {
                   </td>
                   <td className="px-4 py-2 border-b">
                     <Link 
-                      href={`/workflows/${encodeURIComponent(workflow.workflow_id)}/${encodeURIComponent(workflow.run_id)}`}
+                      href={`/workflows/${encodeURIComponent(workflow.workflowId)}/${encodeURIComponent(workflow.runId)}`}
                       className="text-blue-600 hover:underline"
                     >
                       Zobrazit
@@ -221,12 +221,12 @@ export default function WorkflowsPage() {
                   </td>
                   <td className="px-4 py-2 border-b">
                     <button
-                      onClick={() => deleteWorkflow(workflow.run_id, workflow.topic)}
-                      disabled={deletingIds.has(workflow.run_id)}
+                      onClick={() => deleteWorkflow(workflow.runId, workflow.topic)}
+                      disabled={deletingIds.has(workflow.runId)}
                       className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed"
                       title="Smazat workflow běh"
                     >
-                      {deletingIds.has(workflow.run_id) ? '⏳' : '🗑️'}
+                      {deletingIds.has(workflow.runId) ? '⏳' : '🗑️'}
                     </button>
                   </td>
                 </tr>
