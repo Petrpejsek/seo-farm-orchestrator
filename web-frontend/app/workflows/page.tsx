@@ -134,7 +134,7 @@ export default function WorkflowsPage() {
     return status;
   }
 
-  const truncateHash = (hash: string) => hash.substring(0, 8)
+  const truncateHash = (hash: string | undefined) => hash ? hash.substring(0, 8) : 'N/A'
 
   if (loading && workflows.length === 0) {
     return <div className="p-8">Načítám workflows...</div>
