@@ -368,12 +368,12 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                 {stage.status !== 'PENDING' ? (
                   <>
-                    <span>
-                      {new Date(stage.timestamp * 1000).toLocaleTimeString('cs-CZ')}
-                    </span>
-                    {stage.duration && (
-                      <span className="flex items-center gap-1">
-                        ⏱️ {stage.duration.toFixed(1)}s
+                <span>
+                  {new Date(stage.timestamp * 1000).toLocaleTimeString('cs-CZ')}
+                </span>
+                {stage.duration && (
+                  <span className="flex items-center gap-1">
+                    ⏱️ {stage.duration.toFixed(1)}s
                       </span>
                     )}
                   </>
@@ -482,13 +482,13 @@ const AssistantCard = ({ stage, index, isExpanded, onToggleExpand, showOutputMod
                         🔧 Znovu spustit PublishScript
                       </button>
                     ) : (
-                      <button 
-                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        disabled
-                        title="Retry funkcionalita bude implementována později"
-                      >
-                        🔄 Opakovat (neimplementováno)
-                      </button>
+                    <button 
+                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      disabled
+                      title="Retry funkcionalita bude implementována později"
+                    >
+                      🔄 Opakovat (neimplementováno)
+                    </button>
                     )}
                   </div>
                 </div>
@@ -979,11 +979,11 @@ export default function WorkflowDetailPage() {
           : publishStage.output;
           
         const blob = new Blob([JSON.stringify(publishOutput, null, 2)], {
-          type: 'application/json'
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
+        type: 'application/json'
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
         a.download = `published-article-${workflow_id}-${run_id}.json`
         a.click()
         URL.revokeObjectURL(url)
@@ -997,8 +997,8 @@ export default function WorkflowDetailPage() {
         const a = document.createElement('a')
         a.href = url
         a.download = `published-article-${workflow_id}-${run_id}.json`
-        a.click()
-        URL.revokeObjectURL(url)
+      a.click()
+      URL.revokeObjectURL(url)
       }
     } else {
       alert('Finální článek není k dispozici - workflow možná ještě není dokončen.')
@@ -1076,18 +1076,18 @@ export default function WorkflowDetailPage() {
 
     assistantStages.forEach((stage, index) => {
       combinedOutput += `## ${index + 1}. ${formatAssistantName(stage.stage)}\n`;
-      combinedOutput += `Status: ✅ DOKONČENO\n`;
-      combinedOutput += `Stage název: ${stage.stage}\n`;
+        combinedOutput += `Status: ✅ DOKONČENO\n`;
+        combinedOutput += `Stage název: ${stage.stage}\n`;
       
-      if (stage.duration) {
-        combinedOutput += `Doba trvání: ${stage.duration.toFixed(1)}s\n`;
-      }
+        if (stage.duration) {
+          combinedOutput += `Doba trvání: ${stage.duration.toFixed(1)}s\n`;
+        }
       
       combinedOutput += `Čas spuštění: ${new Date(stage.timestamp * 1000).toLocaleString('cs-CZ')}\n`;
       combinedOutput += `Chronologické pořadí: #${index + 1}\n\n`;
-      
-      combinedOutput += `### VÝSTUP:\n`;
-      combinedOutput += formatOutput(stage.output);
+        
+        combinedOutput += `### VÝSTUP:\n`;
+        combinedOutput += formatOutput(stage.output);
       
       combinedOutput += `\n\n${'-'.repeat(60)}\n\n`;
     });
