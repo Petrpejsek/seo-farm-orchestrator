@@ -88,24 +88,47 @@ const parseImageOutput = (output: any): { images: any[], hasImages: boolean } =>
 const OutputModal = ({ isOpen, onClose, output, stageName }: OutputModalProps) => {
   if (!isOpen) return null;
 
-  // Function to copy output to clipboard with proper error handling
-  const copyOutput = async () => {
+  // Function to copy output to clipboard - BULLETPROOF version
+  const copyOutput = () => {
+    const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+    
+    // Method 1: Try modern clipboard API
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          alert('✅ Výstup zkopírován do schránky!');
+        })
+        .catch((error) => {
+          console.error('Clipboard API failed:', error);
+          fallbackCopy(textToCopy);
+        });
+    } else {
+      // Method 2: Fallback to textarea method
+      fallbackCopy(textToCopy);
+    }
+  };
+
+  // Fallback copy method using textarea element
+  const fallbackCopy = (text: string) => {
     try {
-      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
       
-      // Check if clipboard API is available
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(textToCopy);
+      if (success) {
         alert('✅ Výstup zkopírován do schránky!');
       } else {
-        // Browser doesn't support clipboard API - show text for manual copy
-        prompt('📋 Zkopíruj tento text ručně (Ctrl+C):', textToCopy);
+        throw new Error('execCommand failed');
       }
     } catch (error) {
-      console.error('❌ Clipboard error:', error);
-      // If clipboard fails, show text for manual copy
-      const textToCopy = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-      prompt('📋 Zkopíruj tento text ručně (Ctrl+C):', textToCopy);
+      console.error('All copy methods failed:', error);
+      // Final fallback - show in prompt for manual copy
+      prompt('📋 Zkopíruj tento text ručně (Ctrl+C):', text);
     }
   };
 
